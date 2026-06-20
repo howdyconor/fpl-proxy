@@ -897,7 +897,7 @@ async function init(){
     document.getElementById('season-label').textContent=
       `FPL ANALYTICS · ${anyFinished?'2025/26 SEASON DATA':'PRE-SEASON'}`;
 
-    const fx=await fplFetch('fixtures/?return_scores=1');
+    const fx=await fplFetch('fixtures/');
     state.fixtures=fx||[];
     buildTeamHistory();
 
