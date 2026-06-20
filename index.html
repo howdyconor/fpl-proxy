@@ -8,663 +8,916 @@
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Source+Sans+3:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --green: #0B3D2E;
-    --cream: #F2EFE6;
-    --amber: #E8A33D;
-    --muted: #8C948F;
-    --border: #DDD8C8;
-    --up: #5E8C6A;
-    --down: #B5503D;
-    --display: 'Oswald', sans-serif;
-    --body: 'Source Sans 3', sans-serif;
-    --mono: 'JetBrains Mono', monospace;
+    --green: #0B3D2E; --cream: #F2EFE6; --amber: #E8A33D;
+    --muted: #8C948F; --border: #DDD8C8; --up: #5E8C6A; --down: #B5503D;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: var(--body); background: var(--cream); color: #1C231F; min-height: 100vh; }
+  body { font-family: 'Source Sans 3', sans-serif; background: var(--cream); color: #1C231F; min-height: 100vh; }
   button { font-family: inherit; cursor: pointer; }
-  input, select { font-family: inherit; }
-
-  /* Header */
-  #header { padding: 16px 20px 12px; border-bottom: 1px solid var(--border); background: var(--cream); }
-  #header h1 { font-family: var(--display); font-size: 22px; color: var(--green); letter-spacing: 0.01em; display: inline; }
-  #header .sub { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0.04em; margin-left: 10px; }
-
-  /* Tab rail */
-  #tabrail { display: flex; overflow-x: auto; background: var(--green); border-bottom: 2px solid var(--green); }
-  #tabrail button { flex: 0 0 auto; padding: 12px 16px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase; border: none; border-right: 1px solid rgba(255,255,255,0.08); background: transparent; color: #C9D6CC; font-weight: 500; transition: background 0.15s; }
+  input { font-family: inherit; }
+  #header { padding: 16px 20px 12px; border-bottom: 1px solid var(--border); }
+  #header h1 { font-family: 'Oswald', sans-serif; font-size: 22px; color: var(--green); display: inline; }
+  #header .sub { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 0.04em; margin-left: 10px; }
+  #tabrail { display: flex; overflow-x: auto; background: var(--green); scrollbar-width: none; }
+  #tabrail::-webkit-scrollbar { display: none; }
+  #tabrail button { flex: 0 0 auto; padding: 12px 16px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; border: none; border-right: 1px solid rgba(255,255,255,0.08); background: transparent; color: #C9D6CC; font-weight: 500; }
   #tabrail button.active { background: var(--cream); color: var(--green); font-weight: 700; }
-
-  /* Main content */
   #main { padding: 16px; max-width: 980px; margin: 0 auto; }
-
-  /* Cards */
   .card { background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 16px 18px; margin-bottom: 14px; }
-  .card-title { font-family: var(--display); font-size: 15px; color: var(--green); font-weight: 700; letter-spacing: 0.01em; }
+  .card-title { font-family: 'Oswald', sans-serif; font-size: 15px; color: var(--green); font-weight: 700; }
   .card-sub { font-size: 12px; color: var(--muted); margin-top: 2px; margin-bottom: 10px; }
-
-  /* Tables */
   table { width: 100%; border-collapse: collapse; }
-  th { text-align: left; font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--border); }
-  td { padding: 7px 8px; font-size: 13px; border-bottom: 1px solid #EDEAE0; }
+  th { text-align: left; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); padding: 6px 6px; border-bottom: 1px solid var(--border); }
+  td { padding: 7px 6px; font-size: 13px; border-bottom: 1px solid #EDEAE0; }
+  tr:last-child td { border-bottom: none; }
   tr:hover td { background: #FAF8F2; }
-
-  /* Pos tags */
-  .pos { font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; padding: 2px 6px; border-radius: 3px; color: var(--green); font-weight: 700; }
-  .pos-GKP { background: #E8A33D; }
-  .pos-DEF { background: #6FA88A; }
-  .pos-MID { background: #7FAEDB; }
-  .pos-FWD { background: #E0654D; }
-
-  /* Inputs */
+  .pos { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 2px 5px; border-radius: 3px; color: var(--green); font-weight: 700; }
+  .pos-GKP { background: #E8A33D; } .pos-DEF { background: #6FA88A; } .pos-MID { background: #7FAEDB; } .pos-FWD { background: #E0654D; }
   .input { width: 100%; padding: 9px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; outline: none; margin-bottom: 8px; }
   .input:focus { border-color: var(--green); }
-
-  /* Buttons */
   .btn { padding: 9px 16px; border-radius: 4px; border: none; font-size: 13px; font-weight: 600; }
   .btn-primary { background: var(--green); color: #fff; }
-  .btn-primary:disabled { background: #C9D6CC; cursor: not-allowed; }
-  .btn-danger { background: none; border: none; color: var(--down); font-size: 12px; }
-
-  /* Pos filter buttons */
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-danger { background: none; border: none; color: var(--down); font-size: 12px; padding: 0; }
   .pos-filters { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
-  .pos-filter { padding: 6px 12px; border-radius: 4px; border: 1px solid var(--border); background: #fff; color: #1C231F; font-size: 12px; font-family: var(--mono); }
+  .pos-filter { padding: 6px 12px; border-radius: 4px; border: 1px solid var(--border); background: #fff; color: #1C231F; font-size: 12px; font-family: 'JetBrains Mono', monospace; }
   .pos-filter.active { border-color: var(--green); background: var(--green); color: #fff; }
-
-  /* Dropdown */
-  .dropdown { border: 1px solid #EDEAE0; border-radius: 4px; margin-bottom: 8px; overflow: hidden; }
-  .dropdown-item { padding: 8px 10px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #F2EFE6; display: flex; justify-content: space-between; }
+  .dropdown { border: 1px solid #EDEAE0; border-radius: 4px; margin-bottom: 8px; overflow: hidden; max-height: 240px; overflow-y: auto; }
+  .dropdown-item { padding: 8px 10px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #F2EFE6; display: flex; justify-content: space-between; align-items: center; }
   .dropdown-item:hover { background: #FAF8F2; }
-  .dropdown-item:last-child { border-bottom: none; }
-
-  /* Bar chart rows */
   .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-  .bar-label { font-size: 12px; width: 100px; color: #5C6B66; flex-shrink: 0; }
+  .bar-label { font-size: 12px; width: 90px; color: #5C6B66; flex-shrink: 0; }
   .bar-track { flex: 1; background: #EDEAE0; height: 8px; border-radius: 4px; overflow: hidden; }
   .bar-fill { height: 100%; border-radius: 4px; }
-  .bar-val { font-family: var(--mono); font-size: 12px; width: 42px; text-align: right; flex-shrink: 0; }
-
-  /* Empty state */
+  .bar-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; width: 38px; text-align: right; flex-shrink: 0; }
   .empty { padding: 28px 16px; text-align: center; color: var(--muted); font-size: 13px; font-style: italic; }
-
-  /* Error card */
-  .error-card { border-color: var(--down) !important; }
-  .error-msg { font-size: 13px; color: var(--down); font-family: var(--mono); }
-
-  /* Loading */
-  #loading { padding: 40px; text-align: center; color: var(--muted); font-family: var(--mono); font-size: 13px; letter-spacing: 0.04em; }
-
-  /* Transfer verdict badges */
-  .verdict { font-family: var(--mono); font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 10px; }
+  .verdict { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 10px; white-space: nowrap; }
   .verdict-hold { color: var(--up); border: 1px solid var(--up); }
   .verdict-monitor { color: #A8791E; border: 1px solid #A8791E; }
   .verdict-out { color: var(--down); border: 1px solid var(--down); }
-
-  /* Transfer row */
-  .transfer-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border: 1px solid #EDEAE0; border-radius: 5px; margin-bottom: 8px; }
-  .transfer-row.hold { background: #FAFCF8; }
-  .transfer-row.monitor { background: #FFFBF0; }
-  .transfer-row.out { background: #FDF4F1; }
-
-  /* Two col grid */
+  .transfer-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border: 1px solid #EDEAE0; border-radius: 5px; margin-bottom: 8px; gap: 8px; }
+  .transfer-row.hold { background: #FAFCF8; } .transfer-row.monitor { background: #FFFBF0; } .transfer-row.out { background: #FDF4F1; }
   .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   @media (max-width: 500px) { .two-col { grid-template-columns: 1fr; } }
-
-  /* Price watch rows */
   .price-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #F2EFE6; font-size: 13px; }
-
-  /* Expert consensus badge */
-  .consensus-badge { font-family: var(--mono); font-size: 12px; font-weight: 700; background: var(--green); color: #fff; padding: 2px 8px; border-radius: 10px; }
-
-  /* Tip box */
+  .consensus-badge { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; background: var(--green); color: #fff; padding: 2px 8px; border-radius: 10px; flex-shrink: 0; }
   .tip-box { background: #FBF6E9; border: 1px solid var(--amber); border-radius: 6px; padding: 12px 14px; font-size: 12px; color: #7A5A1E; margin-bottom: 14px; }
+  .score-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: #EDEAE0; margin-top: 4px; }
+  .score-fill { background: var(--green); border-radius: 3px; }
 
-  /* Scrollbar */
-  ::-webkit-scrollbar { height: 8px; width: 8px; }
-  ::-webkit-scrollbar-thumb { background: #C9D6CC; border-radius: 4px; }
+  /* ── PITCH LAYOUT ── */
+  .pitch { background: linear-gradient(180deg, #1a6b3a 0%, #1d7a42 50%, #1a6b3a 100%); border-radius: 8px; padding: 16px 8px; position: relative; overflow: hidden; margin-bottom: 14px; }
+  .pitch::before { content:''; position:absolute; top:50%; left:10%; right:10%; height:2px; background:rgba(255,255,255,0.15); }
+  .pitch::after { content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:80px; height:80px; border-radius:50%; border:2px solid rgba(255,255,255,0.15); }
+  .pitch-row { display: flex; justify-content: center; gap: 6px; margin-bottom: 10px; }
+  .pitch-row:last-child { margin-bottom: 0; }
+  .player-card { background: rgba(255,255,255,0.92); border-radius: 5px; padding: 5px 4px; text-align: center; width: 68px; cursor: pointer; border: 2px solid transparent; transition: border-color 0.15s; flex-shrink: 0; }
+  .player-card:hover { border-color: var(--amber); }
+  .player-card .pc-pos { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; color: var(--green); display: block; }
+  .player-card .pc-name { font-size: 11px; font-weight: 600; color: #1C231F; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .player-card .pc-pts { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); display: block; }
+  .player-card.captain { border-color: var(--amber); background: #FFFBF0; }
+  .bench-strip { display: flex; gap: 6px; justify-content: center; padding: 10px 8px 4px; border-top: 2px dashed rgba(255,255,255,0.2); margin-top: 8px; }
+  .bench-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: rgba(255,255,255,0.5); text-align: center; margin-bottom: 4px; letter-spacing: 0.04em; }
 
-  footer { padding: 20px; text-align: center; font-size: 11px; color: var(--muted); font-family: var(--mono); letter-spacing: 0.04em; }
+  /* ── GW RECOMMENDATION ── */
+  .gw-rec { border-radius: 8px; padding: 16px 18px; margin-bottom: 14px; }
+  .gw-rec.hold { background: linear-gradient(135deg, #EDFAF0, #F5FFF7); border: 1px solid var(--up); }
+  .gw-rec.act { background: linear-gradient(135deg, #FBF6E9, #FFFDF5); border: 1px solid var(--amber); }
+  .gw-rec.urgent { background: linear-gradient(135deg, #FDF4F1, #FFF8F6); border: 1px solid var(--down); }
+  .gw-rec-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px; }
+  .gw-rec-title { font-family: 'Oswald', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+  .gw-rec-body { font-size: 13px; color: #3A4A3E; line-height: 1.5; }
+  .gw-rec-bullets { margin-top: 8px; padding-left: 0; list-style: none; }
+  .gw-rec-bullets li { font-size: 12px; color: #3A4A3E; padding: 3px 0; padding-left: 14px; position: relative; }
+  .gw-rec-bullets li::before { content: '→'; position: absolute; left: 0; color: var(--muted); }
 
-  .mono { font-family: var(--mono); }
+  /* ── IMAGE UPLOAD ── */
+  .upload-zone { border: 2px dashed var(--border); border-radius: 6px; padding: 20px; text-align: center; cursor: pointer; margin-bottom: 12px; transition: border-color 0.15s; }
+  .upload-zone:hover { border-color: var(--green); }
+  .upload-zone input { display: none; }
+
+  footer { padding: 20px; text-align: center; font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.04em; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
   .text-muted { color: var(--muted); }
   .text-up { color: var(--up); }
   .text-down { color: var(--down); }
   .text-amber { color: var(--amber); font-weight: 700; }
+  ::-webkit-scrollbar { height: 8px; width: 8px; }
+  ::-webkit-scrollbar-thumb { background: #C9D6CC; border-radius: 4px; }
+
+  /* GW selector */
+  .gw-selector { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .gw-selector label { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 0.04em; }
+  .gw-selector select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px; background: #fff; }
 </style>
 </head>
 <body>
-
 <div id="header">
   <h1>TEAM SHEET</h1>
   <span class="sub" id="season-label">FPL ANALYTICS · LOADING</span>
 </div>
-
 <div id="tabrail">
   <button class="active" data-tab="team">My Team</button>
   <button data-tab="stats">Stats</button>
   <button data-tab="value">Value &amp; Form</button>
   <button data-tab="experts">Experts</button>
   <button data-tab="differentials">Differentials</button>
-  <button data-tab="transfers">Transfer Advice</button>
+  <button data-tab="transfers">Transfers</button>
 </div>
-
 <div id="main">
-  <div id="loading">PULLING LIVE DATA FROM FPL API…</div>
+  <div id="loading" style="padding:40px;text-align:center;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:0.04em">PULLING LIVE DATA FROM FPL API…</div>
   <div id="content" style="display:none"></div>
 </div>
-
 <footer>DATA: OFFICIAL FPL API · UPDATES LIVE ON EACH LOAD</footer>
 
 <script>
-// ── CONFIG ──────────────────────────────────────────────────────────
 const PROXY = '/api/fpl';
 const POSMAP = { 1:'GKP', 2:'DEF', 3:'MID', 4:'FWD' };
 
-// ── STATE ───────────────────────────────────────────────────────────
 let state = {
-  players: [], teams: [], fixtures: [], teamById: {},
-  myTeamIds: [], expertPicks: [], activeTab: 'team',
-  statsPos: 'MID', valuePos: 'ALL'
+  players:[], teams:[], fixtures:[], teamById:{},
+  myTeamIds:[], captainId:null, viceCaptainId:null,
+  expertPicks:[], activeTab:'team',
+  statsPos:'MID', valuePos:'ALL', expertsGW:'all',
+  teamHistory:{} // teamId -> [{event, scored, conceded, was_home}]
 };
 
-// ── STORAGE ─────────────────────────────────────────────────────────
-function lsGet(key, fallback) {
-  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
-  catch { return fallback; }
-}
-function lsSet(key, val) {
-  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
-}
+// ── STORAGE ──────────────────────────────────────────────────────────
+function lsGet(k,fb){ try{const v=localStorage.getItem(k);return v?JSON.parse(v):fb;}catch{return fb;} }
+function lsSet(k,v){ try{localStorage.setItem(k,JSON.stringify(v));}catch{} }
 
-// ── FETCH ───────────────────────────────────────────────────────────
-async function fplFetch(path) {
+// ── FETCH ─────────────────────────────────────────────────────────────
+async function fplFetch(path){
   const res = await fetch(`${PROXY}?path=${encodeURIComponent(path)}`);
-  if (!res.ok) throw new Error(`Proxy error ${res.status}`);
+  if(!res.ok) throw new Error(`Proxy error ${res.status}`);
   return res.json();
 }
 
-// ── TABS ─────────────────────────────────────────────────────────────
-document.querySelectorAll('#tabrail button').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('#tabrail button').forEach(b => b.classList.remove('active'));
+// ── NORMALISE for search (strip accents) ─────────────────────────────
+function normalise(str){
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────
+document.querySelectorAll('#tabrail button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('#tabrail button').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     state.activeTab = btn.dataset.tab;
     render();
   });
 });
 
-// ── HELPERS ──────────────────────────────────────────────────────────
-function posTag(pos) {
-  return `<span class="pos pos-${pos}">${pos}</span>`;
-}
+// ── HELPERS ───────────────────────────────────────────────────────────
+function posTag(pos){ return `<span class="pos pos-${pos}">${pos}</span>`; }
 
-function fixtureDifficulty(teamId, lookahead = 5) {
+// Custom FDR: based on recent results (goals scored + conceded, home/away weighted)
+function customFDR(teamId, lookahead=5){
   const upcoming = state.fixtures
-    .filter(f => !f.finished && (f.team_h === teamId || f.team_a === teamId))
-    .slice(0, lookahead);
-  if (!upcoming.length) return null;
-  const diffs = upcoming.map(f => f.team_h === teamId ? f.team_h_difficulty : f.team_a_difficulty);
-  return diffs.reduce((a, b) => a + b, 0) / diffs.length;
+    .filter(f=>!f.finished && (f.team_h===teamId||f.team_a===teamId))
+    .slice(0,lookahead);
+  if(!upcoming.length) return null;
+
+  const scores = upcoming.map(f=>{
+    const isHome = f.team_h===teamId;
+    const oppId = isHome ? f.team_a : f.team_h;
+    const hist = state.teamHistory[oppId] || [];
+    if(!hist.length) return 3; // fallback to mid difficulty
+    const last10 = hist.slice(-10);
+    // Opponent's avg goals scored (= our defensive challenge)
+    const oppScored = last10.reduce((s,g)=>s+g.scored,0)/last10.length;
+    // Opponent's avg goals conceded (= our attacking opportunity)
+    const oppConceded = last10.reduce((s,g)=>s+g.conceded,0)/last10.length;
+    // Home advantage factor
+    const homeAdj = isHome ? -0.2 : 0.2;
+    // Score 1-5: higher = harder for us
+    // Hard if opp scores a lot and concedes little
+    const raw = (oppScored * 1.2 - oppConceded * 0.8 + 3 + homeAdj);
+    return Math.min(5, Math.max(1, raw));
+  });
+  return scores.reduce((a,b)=>a+b,0)/scores.length;
 }
 
-function pearson(xs, ys) {
-  const n = xs.length;
-  if (n < 2) return 0;
-  const mx = xs.reduce((a,b) => a+b,0)/n, my = ys.reduce((a,b) => a+b,0)/n;
-  let num=0, dx2=0, dy2=0;
-  for (let i=0;i<n;i++) { const dx=xs[i]-mx,dy=ys[i]-my; num+=dx*dy; dx2+=dx*dx; dy2+=dy*dy; }
-  const d = Math.sqrt(dx2*dy2);
-  return d===0 ? 0 : num/d;
+function fdrLabel(fdr){
+  if(fdr===null) return '–';
+  return fdr.toFixed(1);
+}
+function fdrColor(fdr){
+  if(fdr===null) return 'var(--muted)';
+  if(fdr<=2.2) return '#2d7a4f';
+  if(fdr<=3.2) return '#8C948F';
+  if(fdr<=4) return '#c47a2d';
+  return '#B5503D';
 }
 
-// ── RENDER ───────────────────────────────────────────────────────────
-function render() {
-  const el = document.getElementById('content');
-  switch(state.activeTab) {
-    case 'team': el.innerHTML = renderTeam(); bindTeam(); break;
-    case 'stats': el.innerHTML = renderStats(); bindStats(); break;
-    case 'value': el.innerHTML = renderValue(); bindValue(); break;
-    case 'experts': el.innerHTML = renderExperts(); bindExperts(); break;
-    case 'differentials': el.innerHTML = renderDifferentials(); break;
-    case 'transfers': el.innerHTML = renderTransfers(); break;
+function pearson(xs,ys){
+  const n=xs.length; if(n<2)return 0;
+  const mx=xs.reduce((a,b)=>a+b,0)/n, my=ys.reduce((a,b)=>a+b,0)/n;
+  let num=0,dx2=0,dy2=0;
+  for(let i=0;i<n;i++){const dx=xs[i]-mx,dy=ys[i]-my;num+=dx*dy;dx2+=dx*dx;dy2+=dy*dy;}
+  const d=Math.sqrt(dx2*dy2); return d===0?0:num/d;
+}
+
+// Composite player score: weighted by stat correlations at position
+const STAT_FIELDS=[
+  {key:'expected_goal_involvements',label:'xGI'},
+  {key:'expected_goals',label:'xG'},
+  {key:'expected_assists',label:'xA'},
+  {key:'influence',label:'Influence'},
+  {key:'creativity',label:'Creativity'},
+  {key:'threat',label:'Threat'},
+  {key:'ict_index',label:'ICT'},
+  {key:'bps',label:'BPS'},
+  {key:'minutes',label:'Minutes'},
+  {key:'clean_sheets',label:'Clean sheets'},
+  {key:'saves',label:'Saves'},
+];
+
+function getCorrelations(pos){
+  const filtered=state.players.filter(p=>POSMAP[p.element_type]===pos&&p.minutes>270);
+  const pts=filtered.map(p=>p.total_points);
+  return STAT_FIELDS.map(f=>{
+    const vals=filtered.map(p=>parseFloat(p[f.key])||0);
+    return {...f, r:pearson(vals,pts), n:filtered.length};
+  }).sort((a,b)=>Math.abs(b.r)-Math.abs(a.r));
+}
+
+function compositeScore(player){
+  const corrs=getCorrelations(POSMAP[player.element_type]);
+  const topCorrs=corrs.filter(c=>Math.abs(c.r)>0.15).slice(0,6);
+  if(!topCorrs.length) return 0;
+  let score=0, totalWeight=0;
+  topCorrs.forEach(c=>{
+    const val=parseFloat(player[c.key])||0;
+    const weight=Math.abs(c.r);
+    // Normalise against position peers
+    const peers=state.players.filter(p=>POSMAP[p.element_type]===POSMAP[player.element_type]&&p.minutes>90);
+    const vals=peers.map(p=>parseFloat(p[c.key])||0);
+    const max=Math.max(...vals)||1;
+    score+=(val/max)*weight;
+    totalWeight+=weight;
+  });
+  return totalWeight>0 ? score/totalWeight : 0;
+}
+
+// Overall transfer score — no differential penalty, expert = mild positive signal
+function transferScore(player){
+  const form = parseFloat(player.form)||0;
+  const fdr = customFDR(player.team)||3;
+  const stats = compositeScore(player);
+  const ppm = player.total_points/(player.now_cost/10);
+  const expertIds = new Set(state.expertPicks.map(e=>Number(e.playerId)));
+  const expertBoost = expertIds.has(player.id) ? 0.15 : 0; // mild signal, not dominant
+
+  // Normalise each component 0-1 approx
+  const formScore = Math.min(form/12, 1);
+  const fixtureScore = Math.max(0, (5-fdr)/4);
+  const ppmScore = Math.min(ppm/30, 1);
+
+  return (formScore*0.35) + (fixtureScore*0.25) + (stats*0.25) + (ppmScore*0.1) + (expertBoost*0.05);
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────
+function render(){
+  const el=document.getElementById('content');
+  switch(state.activeTab){
+    case 'team': el.innerHTML=renderTeam(); bindTeam(); break;
+    case 'stats': el.innerHTML=renderStats(); bindStats(); break;
+    case 'value': el.innerHTML=renderValue(); bindValue(); break;
+    case 'experts': el.innerHTML=renderExperts(); bindExperts(); break;
+    case 'differentials': el.innerHTML=renderDifferentials(); break;
+    case 'transfers': el.innerHTML=renderTransfers(); bindTransfers(); break;
   }
 }
 
-// ── MY TEAM ──────────────────────────────────────────────────────────
-function renderTeam() {
-  const myPlayers = state.myTeamIds.map(id => state.players.find(p => p.id === id)).filter(Boolean);
-  const totalCost = myPlayers.reduce((s,p) => s + p.now_cost, 0) / 10;
-  const rows = myPlayers.length === 0
-    ? `<div class="empty">Search above to add your squad — nothing here yet.</div>`
-    : `<table>
-        <thead><tr><th></th><th>Player</th><th>Team</th><th>Price</th><th>Pts</th><th>Form</th><th></th></tr></thead>
-        <tbody>
-        ${[...myPlayers].sort((a,b)=>a.element_type-b.element_type).map(p => `
-          <tr>
-            <td>${posTag(POSMAP[p.element_type])}</td>
-            <td>${p.web_name}</td>
-            <td class="text-muted">${state.teamById[p.team]?.short_name||''}</td>
-            <td class="mono">£${(p.now_cost/10).toFixed(1)}m</td>
-            <td class="mono">${p.total_points}</td>
-            <td class="mono">${p.form}</td>
-            <td><button class="btn-danger" onclick="removePlayer(${p.id})">remove</button></td>
-          </tr>`).join('')}
-        </tbody></table>`;
+// ── MY TEAM — pitch formation layout ──────────────────────────────────
+function renderTeam(){
+  const myPlayers=state.myTeamIds.map(id=>state.players.find(p=>p.id===id)).filter(Boolean);
+  const sorted=[...myPlayers].sort((a,b)=>a.element_type-b.element_type);
+
+  const gkps=sorted.filter(p=>p.element_type===1);
+  const defs=sorted.filter(p=>p.element_type===2);
+  const mids=sorted.filter(p=>p.element_type===3);
+  const fwds=sorted.filter(p=>p.element_type===4);
+
+  // First 11 vs bench (simple: first GKP, best of each position)
+  const xi=[...gkps.slice(0,1),...defs.slice(0,Math.min(4,defs.length)),...mids.slice(0,Math.min(4,mids.length)),...fwds.slice(0,Math.min(2,fwds.length))].slice(0,11);
+  const benchIds=new Set(myPlayers.filter(p=>!xi.includes(p)).map(p=>p.id));
+  const bench=myPlayers.filter(p=>benchIds.has(p.id));
+
+  function playerCard(p,isBench=false){
+    const isCap=p.id===state.captainId;
+    return `<div class="player-card${isCap?' captain':''}" onclick="cyclePlayerAction(${p.id})" title="Tap to set captain / remove">
+      <span class="pc-pos">${isCap?'(C) ':''}${POSMAP[p.element_type]}</span>
+      <span class="pc-name">${p.web_name}</span>
+      <span class="pc-pts">${p.total_points}pts · £${(p.now_cost/10).toFixed(1)}m</span>
+    </div>`;
+  }
+
+  const xiRows=[];
+  if(gkps.slice(0,1).length) xiRows.push(`<div class="pitch-row">${gkps.slice(0,1).map(p=>playerCard(p)).join('')}</div>`);
+  if(defs.slice(0,4).length) xiRows.push(`<div class="pitch-row">${defs.slice(0,4).map(p=>playerCard(p)).join('')}</div>`);
+  if(mids.slice(0,4).length) xiRows.push(`<div class="pitch-row">${mids.slice(0,4).map(p=>playerCard(p)).join('')}</div>`);
+  if(fwds.slice(0,2).length) xiRows.push(`<div class="pitch-row">${fwds.slice(0,2).map(p=>playerCard(p)).join('')}</div>`);
+
+  const totalCost=myPlayers.reduce((s,p)=>s+p.now_cost,0)/10;
 
   return `
     <div class="card">
       <div class="card-title">Build your squad</div>
-      <div class="card-sub">Search and add your 15 FPL players. Saved automatically.</div>
+      <div class="card-sub">Search and add your 15 FPL players. Tap a player card to set captain / remove.</div>
       <input class="input" id="player-search" placeholder="Search player name…" autocomplete="off">
       <div id="search-results"></div>
     </div>
-    <div class="card">
-      <div class="card-title">Squad (${myPlayers.length}/15)</div>
-      ${myPlayers.length ? `<div class="card-sub">Total value: £${totalCost.toFixed(1)}m</div>` : ''}
-      ${rows}
-    </div>`;
+    ${myPlayers.length===0 ? `<div class="card"><div class="empty">Add players above to see your squad on the pitch.</div></div>` : `
+    <div class="pitch">
+      ${xiRows.join('')}
+      ${bench.length?`<div class="bench-label">BENCH</div><div class="bench-strip">${bench.map(p=>playerCard(p,true)).join('')}</div>`:''}
+    </div>
+    <div class="card" style="padding:12px 14px">
+      <div style="display:flex;justify-content:space-between;font-size:13px">
+        <span class="text-muted">Squad value</span><span class="mono">£${totalCost.toFixed(1)}m</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px">
+        <span class="text-muted">Players</span><span class="mono">${myPlayers.length}/15</span>
+      </div>
+    </div>`}`;
 }
 
-function bindTeam() {
-  const input = document.getElementById('player-search');
-  const results = document.getElementById('search-results');
-  input.addEventListener('input', () => {
-    const q = input.value.toLowerCase().trim();
-    if (!q) { results.innerHTML = ''; return; }
-    const matches = state.players
-      .filter(p => p.web_name.toLowerCase().includes(q) && !state.myTeamIds.includes(p.id))
-      .slice(0, 8);
-    results.innerHTML = matches.length ? `<div class="dropdown">${matches.map(p =>
-      `<div class="dropdown-item" onclick="addPlayer(${p.id})">
+function bindTeam(){
+  const input=document.getElementById('player-search');
+  const results=document.getElementById('search-results');
+  if(!input) return;
+  input.addEventListener('input',()=>{
+    const q=normalise(input.value.trim());
+    if(!q){results.innerHTML='';return;}
+    const matches=state.players
+      .filter(p=>normalise(p.web_name).includes(q)&&!state.myTeamIds.includes(p.id))
+      .slice(0,8);
+    results.innerHTML=matches.length?`<div class="dropdown">${matches.map(p=>`
+      <div class="dropdown-item" onclick="addPlayer(${p.id})">
         <span>${posTag(POSMAP[p.element_type])} &nbsp;${p.web_name} <span class="text-muted">(${state.teamById[p.team]?.short_name||''})</span></span>
-        <span class="mono">£${(p.now_cost/10).toFixed(1)}m</span>
-      </div>`).join('')}</div>` : '';
+        <span class="mono" style="font-size:12px">£${(p.now_cost/10).toFixed(1)}m</span>
+      </div>`).join('')}</div>`:'';
   });
 }
 
-window.addPlayer = function(id) {
-  if (state.myTeamIds.length >= 15) return;
-  state.myTeamIds = [...state.myTeamIds, id];
-  lsSet('fpl_my_team', state.myTeamIds);
+let _tapState={};
+window.cyclePlayerAction=function(id){
+  // First tap: set captain. Second tap: remove.
+  if(_tapState[id]==='captain'){
+    removePlayer(id);
+    delete _tapState[id];
+  } else {
+    state.captainId=id;
+    _tapState={[id]:'captain'};
+    lsSet('fpl_captain',id);
+    render();
+  }
+};
+window.addPlayer=function(id){
+  if(state.myTeamIds.length>=15)return;
+  state.myTeamIds=[...state.myTeamIds,id];
+  lsSet('fpl_my_team',state.myTeamIds);
   render();
 };
-window.removePlayer = function(id) {
-  state.myTeamIds = state.myTeamIds.filter(x => x !== id);
-  lsSet('fpl_my_team', state.myTeamIds);
+window.removePlayer=function(id){
+  state.myTeamIds=state.myTeamIds.filter(x=>x!==id);
+  if(state.captainId===id) state.captainId=null;
+  lsSet('fpl_my_team',state.myTeamIds);
+  lsSet('fpl_captain',state.captainId);
   render();
 };
 
 // ── STATS ─────────────────────────────────────────────────────────────
-const STAT_FIELDS = [
-  { key:'expected_goal_involvements', label:'xGI' },
-  { key:'expected_goals', label:'xG' },
-  { key:'expected_assists', label:'xA' },
-  { key:'influence', label:'Influence' },
-  { key:'creativity', label:'Creativity' },
-  { key:'threat', label:'Threat' },
-  { key:'ict_index', label:'ICT Index' },
-  { key:'bps', label:'BPS' },
-  { key:'minutes', label:'Minutes' },
-  { key:'clean_sheets', label:'Clean sheets' },
-  { key:'saves', label:'Saves' },
-];
+function renderStats(){
+  const pos=state.statsPos;
+  const filtered=state.players.filter(p=>POSMAP[p.element_type]===pos&&p.minutes>270);
+  const corrs=getCorrelations(pos);
 
-function renderStats() {
-  const pos = state.statsPos;
-  const filtered = state.players.filter(p => POSMAP[p.element_type] === pos && p.minutes > 270);
-  const pts = filtered.map(p => p.total_points);
+  // Top players by composite weighted score
+  const scored=filtered
+    .map(p=>({...p,comp:compositeScore(p),ppm:p.total_points/(p.now_cost/10)}))
+    .sort((a,b)=>b.comp-a.comp).slice(0,12);
 
-  const correlations = STAT_FIELDS.map(f => {
-    const vals = filtered.map(p => parseFloat(p[f.key]) || 0);
-    return { ...f, r: pearson(vals, pts) };
-  }).sort((a,b) => Math.abs(b.r) - Math.abs(a.r));
-
-  const valueRanked = [...filtered]
-    .map(p => ({ ...p, ppm: p.total_points / (p.now_cost/10) }))
-    .sort((a,b) => b.ppm - a.ppm).slice(0, 12);
-
-  const filterBtns = ['GKP','DEF','MID','FWD'].map(p =>
+  const filterBtns=['GKP','DEF','MID','FWD'].map(p=>
     `<button class="pos-filter ${p===pos?'active':''}" data-pos="${p}">${p}</button>`).join('');
 
-  const bars = correlations.map(c => `
+  const bars=corrs.map(c=>`
     <div class="bar-row">
       <span class="bar-label">${c.label}</span>
       <div class="bar-track"><div class="bar-fill" style="width:${Math.abs(c.r)*100}%;background:${c.r>=0?'#5E8C6A':'#B5503D'}"></div></div>
       <span class="bar-val">${c.r.toFixed(2)}</span>
     </div>`).join('');
 
-  const valRows = valueRanked.map(p => `
+  const topRows=scored.map((p,i)=>`
     <tr>
+      <td style="color:var(--muted);font-size:11px;font-family:'JetBrains Mono',monospace">${i+1}</td>
       <td>${p.web_name}</td>
-      <td class="text-muted">${state.teamById[p.team]?.short_name||''}</td>
-      <td class="mono">£${(p.now_cost/10).toFixed(1)}m</td>
-      <td class="mono">${p.total_points}</td>
-      <td class="mono" style="font-weight:700;color:var(--green)">${p.ppm.toFixed(1)}</td>
+      <td class="text-muted" style="font-size:12px">${state.teamById[p.team]?.short_name||''}</td>
+      <td class="mono" style="font-size:12px">£${(p.now_cost/10).toFixed(1)}m</td>
+      <td>
+        <div class="score-bar" style="width:80px"><div class="score-fill" style="width:${p.comp*100}%"></div></div>
+      </td>
+      <td class="mono" style="font-size:12px">${p.total_points}pts</td>
     </tr>`).join('');
 
   return `
     <div class="card">
       <div class="card-title">What correlates to points?</div>
-      <div class="card-sub">Minimum 270 minutes played · ${filtered.length} players in sample</div>
+      <div class="card-sub">Correlation of each stat with total points · ${filtered.length} players (min 270 mins)</div>
       <div class="pos-filters" id="stats-filters">${filterBtns}</div>
-      ${filtered.length < 5 ? `<div class="empty">Not enough players with sufficient minutes yet.</div>` : bars}
+      ${filtered.length<5?`<div class="empty">Not enough data for this position yet.</div>`:bars}
     </div>
     <div class="card">
-      <div class="card-title">Best value: points per £1m</div>
-      <div class="card-sub">Top ${pos} performers relative to price</div>
+      <div class="card-title">Top ${pos} targets — composite score</div>
+      <div class="card-sub">Weighted by the stats that actually correlate to points at this position</div>
       <table>
-        <thead><tr><th>Player</th><th>Team</th><th>Price</th><th>Pts</th><th>Pts/£m</th></tr></thead>
-        <tbody>${valRows}</tbody>
+        <thead><tr><th>#</th><th>Player</th><th>Team</th><th>Price</th><th>Stat score</th><th>Total pts</th></tr></thead>
+        <tbody>${topRows}</tbody>
       </table>
     </div>`;
 }
 
-function bindStats() {
-  document.querySelectorAll('#stats-filters .pos-filter').forEach(btn => {
-    btn.addEventListener('click', () => { state.statsPos = btn.dataset.pos; render(); });
+function bindStats(){
+  document.querySelectorAll('#stats-filters .pos-filter').forEach(btn=>{
+    btn.addEventListener('click',()=>{state.statsPos=btn.dataset.pos;render();});
   });
 }
 
 // ── VALUE & FORM ──────────────────────────────────────────────────────
-function renderValue() {
-  const pos = state.valuePos;
-  const filtered = state.players
-    .filter(p => p.minutes > 90)
-    .filter(p => pos === 'ALL' || POSMAP[p.element_type] === pos)
-    .map(p => {
-      const fd = fixtureDifficulty(p.team);
-      const net = (p.transfers_in_event||0) - (p.transfers_out_event||0);
-      return { ...p, fd, net };
+function renderValue(){
+  const pos=state.valuePos;
+  const filtered=state.players
+    .filter(p=>p.minutes>90)
+    .filter(p=>pos==='ALL'||POSMAP[p.element_type]===pos)
+    .map(p=>{
+      const fdr=customFDR(p.team);
+      const form=parseFloat(p.form)||0;
+      const net=(p.transfers_in_event||0)-(p.transfers_out_event||0);
+      const goodForm=form>=5, easyRun=fdr&&fdr<=2.4, hardRun=fdr&&fdr>=3.8;
+      let read='Steady',readColor='var(--muted)';
+      if(goodForm&&easyRun){read='✦ In-form + easy run';readColor='var(--up)';}
+      else if(goodForm&&hardRun){read='In-form, tough run';readColor='var(--amber)';}
+      else if(!goodForm&&easyRun){read='Cold, fixtures turn';readColor='#7FAEDB';}
+      return{...p,fdr,net,read,readColor};
     })
-    .sort((a,b) => parseFloat(b.form) - parseFloat(a.form));
+    .sort((a,b)=>parseFloat(b.form)-parseFloat(a.form));
 
-  const filterBtns = ['ALL','GKP','DEF','MID','FWD'].map(p =>
+  const filterBtns=['ALL','GKP','DEF','MID','FWD'].map(p=>
     `<button class="pos-filter ${p===pos?'active':''}" data-pos="${p}">${p}</button>`).join('');
 
-  const rows = filtered.slice(0,15).map(p => {
-    const form = parseFloat(p.form);
-    const goodForm = form >= 5, easyRun = p.fd && p.fd <= 2.6, hardRun = p.fd && p.fd >= 3.6;
-    let read = 'Steady', readColor = 'var(--muted)';
-    if (goodForm && easyRun) { read = 'In-form + easy run'; readColor = 'var(--up)'; }
-    else if (goodForm && hardRun) { read = 'In-form but tough run'; readColor = 'var(--amber)'; }
-    else if (!goodForm && easyRun) { read = 'Cold, fixtures turn'; readColor = '#7FAEDB'; }
-    return `<tr>
+  const rows=filtered.slice(0,15).map(p=>`
+    <tr>
       <td>${posTag(POSMAP[p.element_type])} &nbsp;${p.web_name}</td>
-      <td class="text-muted">${state.teamById[p.team]?.short_name||''}</td>
-      <td class="mono">${p.form}</td>
-      <td class="mono">${p.fd ? p.fd.toFixed(1) : '–'}</td>
-      <td style="color:${readColor};font-size:12px;font-weight:600">${read}</td>
-    </tr>`;
-  }).join('');
+      <td class="text-muted" style="font-size:12px">${state.teamById[p.team]?.short_name||''}</td>
+      <td class="mono" style="font-size:12px">${p.form}</td>
+      <td class="mono" style="font-size:12px;color:${fdrColor(p.fdr)}">${fdrLabel(p.fdr)}</td>
+      <td style="color:${p.readColor};font-size:11px;font-weight:600">${p.read}</td>
+    </tr>`).join('');
 
-  const risers = [...filtered].sort((a,b)=>b.net-a.net).slice(0,6);
-  const fallers = [...filtered].sort((a,b)=>a.net-b.net).slice(0,6);
+  const risers=[...filtered].sort((a,b)=>b.net-a.net).slice(0,6);
+  const fallers=[...filtered].sort((a,b)=>a.net-b.net).slice(0,6);
 
-  return `
+  return`
     <div class="card">
       <div class="card-title">Form vs upcoming fixtures</div>
-      <div class="card-sub">Form = FPL rolling metric · FDR averages next 5 games (1 easy – 5 hard)</div>
+      <div class="card-sub">Custom FDR based on last 10 results (goals scored + conceded, home/away weighted) · ✦ = golden combo</div>
       <div class="pos-filters" id="value-filters">${filterBtns}</div>
       <table>
-        <thead><tr><th>Player</th><th>Team</th><th>Form</th><th>Next 5 FDR</th><th>Read</th></tr></thead>
+        <thead><tr><th>Player</th><th>Team</th><th>Form</th><th>Custom FDR</th><th>Read</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
     <div class="two-col">
       <div class="card">
         <div class="card-title">Price rise watch</div>
-        <div class="card-sub">Highest net transfers in</div>
-        ${risers.map(p=>`<div class="price-row"><span><span class="text-up">▲</span> ${p.web_name}</span><span class="mono text-muted">+${p.net.toLocaleString()}</span></div>`).join('')}
+        <div class="card-sub">Net transfers in this event</div>
+        ${risers.map(p=>`<div class="price-row"><span><span class="text-up">▲</span> ${p.web_name}</span><span class="mono text-muted" style="font-size:12px">+${p.net.toLocaleString()}</span></div>`).join('')}
       </div>
       <div class="card">
         <div class="card-title">Price drop watch</div>
-        <div class="card-sub">Highest net transfers out</div>
-        ${fallers.map(p=>`<div class="price-row"><span><span class="text-down">▼</span> ${p.web_name}</span><span class="mono text-muted">${p.net.toLocaleString()}</span></div>`).join('')}
+        <div class="card-sub">Net transfers out this event</div>
+        ${fallers.map(p=>`<div class="price-row"><span><span class="text-down">▼</span> ${p.web_name}</span><span class="mono text-muted" style="font-size:12px">${p.net.toLocaleString()}</span></div>`).join('')}
       </div>
     </div>`;
 }
 
-function bindValue() {
-  document.querySelectorAll('#value-filters .pos-filter').forEach(btn => {
-    btn.addEventListener('click', () => { state.valuePos = btn.dataset.pos; render(); });
+function bindValue(){
+  document.querySelectorAll('#value-filters .pos-filter').forEach(btn=>{
+    btn.addEventListener('click',()=>{state.valuePos=btn.dataset.pos;render();});
   });
 }
 
 // ── EXPERTS ───────────────────────────────────────────────────────────
-let expertSearch = { query:'', selected: null };
+let expertSearch={query:'',selected:null};
 
-function renderExperts() {
-  const picks = state.expertPicks;
-  const consensus = {};
-  picks.forEach(e => {
-    if (!consensus[e.playerId]) consensus[e.playerId] = { name: e.playerName, count: 0, experts: [] };
+function getGWOptions(){
+  const gws=[...new Set(state.expertPicks.map(e=>e.gw).filter(Boolean))].sort((a,b)=>a-b);
+  return gws;
+}
+
+function renderExperts(){
+  const picks=state.expertPicks;
+  const gws=getGWOptions();
+  const filterGW=state.expertsGW;
+  const visible=filterGW==='all'?picks:picks.filter(e=>String(e.gw)===String(filterGW));
+
+  const consensus={};
+  visible.forEach(e=>{
+    if(!consensus[e.playerId]) consensus[e.playerId]={name:e.playerName,count:0,experts:[]};
     consensus[e.playerId].count++;
     consensus[e.playerId].experts.push(e.expert);
   });
-  const sorted = Object.entries(consensus).sort((a,b)=>b[1].count-a[1].count);
+  const sorted=Object.entries(consensus).sort((a,b)=>b[1].count-a[1].count);
 
-  const playerVal = expertSearch.selected
-    ? `${expertSearch.selected.web_name} ✓`
-    : expertSearch.query;
+  const gwSelector=gws.length?`
+    <div class="gw-selector">
+      <label>GAMEWEEK</label>
+      <select id="gw-filter">
+        <option value="all">All gameweeks</option>
+        ${gws.map(g=>`<option value="${g}" ${String(filterGW)===String(g)?'selected':''}>GW ${g}</option>`).join('')}
+      </select>
+    </div>`:'';
 
-  return `
+  return`
     <div class="card">
       <div class="card-title">Log an expert pick</div>
-      <div class="card-sub">No API exists for social media expert teams — log what you see and the app builds consensus from it.</div>
-      <input class="input" id="expert-name" placeholder="Expert / source name (e.g. FPL Mate)" value="">
-      <input class="input" id="expert-player" placeholder="Player they picked…" value="${playerVal}" autocomplete="off">
+      <div class="card-sub">No API for social picks — log what you see. Tag by gameweek to track week-by-week consensus shifts.</div>
+      <input class="input" id="expert-name" placeholder="Expert / source (e.g. FPL Mate, Let's Talk FPL)">
+      <input class="input" id="expert-player" placeholder="Player they picked…" autocomplete="off">
       <div id="expert-results"></div>
+      <input class="input" id="expert-gw" placeholder="Gameweek number (e.g. 1)" type="number" min="1" max="38">
       <input class="input" id="expert-note" placeholder="Note (optional) — e.g. captain pick, wildcard target">
-      <button class="btn btn-primary" id="add-pick-btn">Add pick</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" id="add-pick-btn">Add pick</button>
+        <label class="btn btn-primary btn-sm" style="display:flex;align-items:center;gap:6px;cursor:pointer">
+          📷 Scan team image
+          <input type="file" id="expert-image" accept="image/*" style="display:none">
+        </label>
+      </div>
+      <div id="scan-status" style="margin-top:8px;font-size:12px;color:var(--muted)"></div>
     </div>
+    ${gwSelector}
     <div class="card">
-      <div class="card-title">Consensus (${picks.length} picks logged)</div>
+      <div class="card-title">Consensus (${visible.length} picks${filterGW!=='all'?` · GW ${filterGW}`:''})</div>
       <div class="card-sub">Players appearing across the most expert sources</div>
-      ${sorted.length === 0
-        ? `<div class="empty">Log a few picks above to see consensus build up.</div>`
-        : sorted.map(([id, c]) => `
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #F2EFE6">
-            <span style="font-size:13px">${c.name}</span>
-            <span style="font-size:12px;color:var(--muted)">${c.experts.join(', ')}</span>
+      ${sorted.length===0?`<div class="empty">Log some picks above to see consensus build.</div>`:
+        sorted.map(([id,c])=>`
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #F2EFE6;gap:8px">
+            <span style="font-size:13px;flex:1">${c.name}</span>
+            <span style="font-size:11px;color:var(--muted);flex:2">${[...new Set(c.experts)].join(', ')}</span>
             <span class="consensus-badge">${c.count}</span>
           </div>`).join('')}
     </div>
     <div class="card">
       <div class="card-title">All logged picks</div>
-      ${picks.length === 0
-        ? `<div class="empty">Nothing logged yet.</div>`
-        : picks.map(e => `
-          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #F2EFE6;font-size:13px">
-            <span><strong>${e.expert}</strong> → ${e.playerName}${e.note?` <span class="text-muted">(${e.note})</span>`:''}</span>
-            <button class="btn-danger" onclick="removePick('${e.id}')">remove</button>
+      ${picks.length===0?`<div class="empty">Nothing logged yet.</div>`:
+        picks.slice().reverse().map(e=>`
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #F2EFE6;font-size:13px;gap:8px">
+            <span style="flex:1"><strong>${e.expert}</strong>${e.gw?` <span style="font-size:10px;color:var(--muted)">GW${e.gw}</span>`:''} → ${e.playerName}${e.note?` <span style="color:var(--muted)">(${e.note})</span>`:''}</span>
+            <button class="btn-danger" onclick="removePick('${e.id}')">✕</button>
           </div>`).join('')}
     </div>`;
 }
 
-function bindExperts() {
-  const playerInput = document.getElementById('expert-player');
-  const results = document.getElementById('expert-results');
+function bindExperts(){
+  const playerInput=document.getElementById('expert-player');
+  const results=document.getElementById('expert-results');
+  if(!playerInput) return;
 
-  playerInput.addEventListener('input', () => {
-    expertSearch.selected = null;
-    expertSearch.query = playerInput.value;
-    const q = playerInput.value.toLowerCase().trim();
-    if (!q) { results.innerHTML = ''; return; }
-    const matches = state.players.filter(p => p.web_name.toLowerCase().includes(q)).slice(0, 6);
-    results.innerHTML = matches.length ? `<div class="dropdown">${matches.map(p =>
+  playerInput.addEventListener('input',()=>{
+    expertSearch.selected=null;
+    expertSearch.query=playerInput.value;
+    const q=normalise(playerInput.value.trim());
+    if(!q){results.innerHTML='';return;}
+    const matches=state.players.filter(p=>normalise(p.web_name).includes(q)).slice(0,6);
+    results.innerHTML=matches.length?`<div class="dropdown">${matches.map(p=>
       `<div class="dropdown-item" onclick="selectExpertPlayer(${p.id},'${p.web_name.replace(/'/g,"\\'")}')">
         ${p.web_name} <span class="text-muted">(${state.teamById[p.team]?.short_name||''})</span>
-      </div>`).join('')}</div>` : '';
+      </div>`).join('')}</div>`:'';
   });
 
-  document.getElementById('add-pick-btn').addEventListener('click', () => {
-    const expert = document.getElementById('expert-name').value.trim();
-    const note = document.getElementById('expert-note').value.trim();
-    if (!expert || !expertSearch.selected) return;
-    state.expertPicks = [...state.expertPicks, {
-      id: Date.now().toString(),
-      expert, note,
-      playerId: expertSearch.selected.id,
-      playerName: expertSearch.selected.web_name
+  document.getElementById('add-pick-btn').addEventListener('click',()=>{
+    const expert=document.getElementById('expert-name').value.trim();
+    const note=document.getElementById('expert-note').value.trim();
+    const gw=document.getElementById('expert-gw').value.trim();
+    if(!expert||!expertSearch.selected) return;
+    state.expertPicks=[...state.expertPicks,{
+      id:Date.now().toString(), expert, note,
+      gw:gw?parseInt(gw):null,
+      playerId:expertSearch.selected.id,
+      playerName:expertSearch.selected.web_name
     }];
-    lsSet('fpl_expert_picks', state.expertPicks);
-    expertSearch = { query:'', selected: null };
+    lsSet('fpl_expert_picks',state.expertPicks);
+    expertSearch={query:'',selected:null};
     render();
   });
+
+  const gwFilter=document.getElementById('gw-filter');
+  if(gwFilter) gwFilter.addEventListener('change',()=>{state.expertsGW=gwFilter.value;render();});
+
+  // Image scanning via Claude API
+  const imgInput=document.getElementById('expert-image');
+  const scanStatus=document.getElementById('scan-status');
+  if(imgInput){
+    imgInput.addEventListener('change',async()=>{
+      const file=imgInput.files[0];
+      if(!file) return;
+      scanStatus.textContent='Scanning image…';
+      try{
+        const b64=await new Promise((res,rej)=>{
+          const r=new FileReader();
+          r.onload=()=>res(r.result.split(',')[1]);
+          r.onerror=rej;
+          r.readAsDataURL(file);
+        });
+        const expertName=document.getElementById('expert-name').value.trim()||'Scanned expert';
+        const gwVal=document.getElementById('expert-gw').value.trim();
+        const resp=await fetch('https://api.anthropic.com/v1/messages',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            model:'claude-sonnet-4-6',
+            max_tokens:1000,
+            messages:[{
+              role:'user',
+              content:[
+                {type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:b64}},
+                {type:'text',text:`This is a screenshot of an FPL (Fantasy Premier League) team. List every player name you can see in the team. Return ONLY a JSON array of strings with the player surnames or web names as they appear in FPL. Example: ["Salah","Haaland","Trent"]. No other text.`}
+              ]
+            }]
+          })
+        });
+        const data=await resp.json();
+        const text=data.content?.filter(b=>b.type==='text').map(b=>b.text).join('')||'';
+        const clean=text.replace(/```json|```/g,'').trim();
+        const names=JSON.parse(clean);
+        // Match to players
+        let matched=0;
+        names.forEach(name=>{
+          const norm=normalise(name);
+          const found=state.players.find(p=>normalise(p.web_name).includes(norm)||norm.includes(normalise(p.web_name)));
+          if(found){
+            state.expertPicks=[...state.expertPicks,{
+              id:Date.now().toString()+'_'+found.id,
+              expert:expertName, note:'scanned',
+              gw:gwVal?parseInt(gwVal):null,
+              playerId:found.id,
+              playerName:found.web_name
+            }];
+            matched++;
+          }
+        });
+        lsSet('fpl_expert_picks',state.expertPicks);
+        scanStatus.textContent=`✓ Added ${matched} of ${names.length} players from image.`;
+        render();
+      } catch(e){
+        scanStatus.textContent=`Scan failed: ${e.message}`;
+      }
+    });
+  }
 }
 
-window.selectExpertPlayer = function(id, name) {
-  const p = state.players.find(p => p.id === id);
-  expertSearch.selected = p;
-  expertSearch.query = name;
-  document.getElementById('expert-player').value = `${name} ✓`;
-  document.getElementById('expert-results').innerHTML = '';
+window.selectExpertPlayer=function(id,name){
+  const p=state.players.find(p=>p.id===id);
+  expertSearch.selected=p;
+  document.getElementById('expert-player').value=`${name} ✓`;
+  document.getElementById('expert-results').innerHTML='';
 };
-
-window.removePick = function(id) {
-  state.expertPicks = state.expertPicks.filter(e => e.id !== id);
-  lsSet('fpl_expert_picks', state.expertPicks);
+window.removePick=function(id){
+  state.expertPicks=state.expertPicks.filter(e=>e.id!==id);
+  lsSet('fpl_expert_picks',state.expertPicks);
   render();
 };
 
 // ── DIFFERENTIALS ─────────────────────────────────────────────────────
-function renderDifferentials() {
-  const expertIds = new Set(state.expertPicks.map(e => Number(e.playerId)));
-  const diffs = state.players
-    .filter(p => p.minutes > 270 && parseFloat(p.selected_by_percent) < 8 && !expertIds.has(p.id))
-    .map(p => ({ ...p, score: parseFloat(p.form)*2 + parseFloat(p.ict_index)/10 + p.total_points/20 }))
-    .sort((a,b) => b.score - a.score).slice(0, 12);
+function renderDifferentials(){
+  const expertIds=new Set(state.expertPicks.map(e=>Number(e.playerId)));
+  const diffs=state.players
+    .filter(p=>p.minutes>270&&parseFloat(p.selected_by_percent)<8)
+    .map(p=>{
+      const comp=compositeScore(p);
+      const fdr=customFDR(p.team)||3;
+      const isExpert=expertIds.has(p.id);
+      const score=comp*0.5+(parseFloat(p.form)/12)*0.3+((5-fdr)/4)*0.2;
+      return{...p,comp,fdr,isExpert,score};
+    })
+    .sort((a,b)=>b.score-a.score).slice(0,12);
 
-  const tip = state.expertPicks.length === 0
-    ? `<div class="tip-box">Tip: log some expert picks in the Experts tab — differentials are most meaningful once there's a consensus list to differ from.</div>`
-    : '';
+  const tip=state.expertPicks.length===0?
+    `<div class="tip-box">Tip: log expert picks in the Experts tab — differentials are picks that look good on stats but aren't being widely talked about.</div>`:'';
 
-  return `
+  return`
     ${tip}
     <div class="card">
       <div class="card-title">Differential picks</div>
-      <div class="card-sub">Under 8% ownership · strong underlying numbers · not on any logged expert list</div>
-      ${diffs.length === 0
-        ? `<div class="empty">No qualifying differentials — try logging fewer expert picks or wait for the season to start.</div>`
-        : `<table>
-            <thead><tr><th>Player</th><th>Team</th><th>Own%</th><th>Form</th><th>ICT</th><th>Price</th></tr></thead>
-            <tbody>${diffs.map(p=>`
-              <tr>
-                <td>${posTag(POSMAP[p.element_type])} &nbsp;${p.web_name}</td>
-                <td class="text-muted">${state.teamById[p.team]?.short_name||''}</td>
-                <td class="mono">${p.selected_by_percent}%</td>
-                <td class="mono">${p.form}</td>
-                <td class="mono">${p.ict_index}</td>
-                <td class="mono">£${(p.now_cost/10).toFixed(1)}m</td>
-              </tr>`).join('')}
-            </tbody>
-          </table>`}
+      <div class="card-sub">Under 8% ownership · scored on stats composite + form + fixtures · expert-picked shown for context only</div>
+      ${diffs.length===0?`<div class="empty">No qualifying differentials right now.</div>`:`
+      <table>
+        <thead><tr><th>Player</th><th>Team</th><th>Own%</th><th>Form</th><th>FDR</th><th>Expert</th><th>£</th></tr></thead>
+        <tbody>${diffs.map(p=>`
+          <tr>
+            <td>${posTag(POSMAP[p.element_type])} &nbsp;${p.web_name}</td>
+            <td class="text-muted" style="font-size:12px">${state.teamById[p.team]?.short_name||''}</td>
+            <td class="mono" style="font-size:12px">${p.selected_by_percent}%</td>
+            <td class="mono" style="font-size:12px">${p.form}</td>
+            <td class="mono" style="font-size:12px;color:${fdrColor(p.fdr)}">${fdrLabel(p.fdr)}</td>
+            <td style="font-size:12px">${p.isExpert?'<span class="text-amber">✓</span>':'<span class="text-muted">–</span>'}</td>
+            <td class="mono" style="font-size:12px">£${(p.now_cost/10).toFixed(1)}m</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`}
     </div>`;
 }
 
 // ── TRANSFERS ─────────────────────────────────────────────────────────
-function renderTransfers() {
-  const myPlayers = state.myTeamIds.map(id => state.players.find(p => p.id === id)).filter(Boolean);
-  const expertIds = new Set(state.expertPicks.map(e => Number(e.playerId)));
+function generateGWRecommendation(analysis, candidates){
+  const urgentOuts=analysis.filter(p=>p.verdict==='out');
+  const monitors=analysis.filter(p=>p.verdict==='monitor');
+  const topCandidate=candidates[0];
+  const myPlayerIds=new Set(state.myTeamIds);
 
-  const analysis = myPlayers.map(p => {
-    const fd = fixtureDifficulty(p.team);
-    const form = parseFloat(p.form) || 0;
-    const flags = [];
-    if (form < 3) flags.push('Cold form');
-    if (fd && fd >= 3.8) flags.push('Tough fixture run');
-    if (p.chance_of_playing_next_round !== null && p.chance_of_playing_next_round < 75)
+  // Check if top candidate is significantly better than someone we'd transfer out
+  const mustHaveScore=topCandidate?topCandidate.score:0;
+  const worstHoldScore=urgentOuts.length?Math.min(...urgentOuts.map(p=>p.score)):1;
+  const bigGain=mustHaveScore-worstHoldScore>0.2;
+
+  if(urgentOuts.length>=2){
+    return{
+      type:'urgent',
+      headline:'Multiple transfers recommended',
+      body:`You have ${urgentOuts.length} players flagged with multiple concerns. If you have free transfers available, now is a good time to use them.`,
+      bullets:[
+        ...urgentOuts.map(p=>`Consider moving ${p.web_name} out (${p.flags.join(', ')})`),
+        topCandidate?`${topCandidate.web_name} ranks highest for transfer in based on form, fixtures and stats`:null
+      ].filter(Boolean)
+    };
+  } else if(urgentOuts.length===1&&bigGain){
+    return{
+      type:'act',
+      headline:'One transfer worth making',
+      body:`One targeted transfer looks worthwhile this week.`,
+      bullets:[
+        `Move ${urgentOuts[0].web_name} out — ${urgentOuts[0].flags.join(', ')}`,
+        topCandidate?`${topCandidate.web_name} is the strongest candidate in (form: ${topCandidate.form}, FDR: ${fdrLabel(topCandidate.fdr)})`:null
+      ].filter(Boolean)
+    };
+  } else if(monitors.length>0&&!urgentOuts.length){
+    return{
+      type:'act',
+      headline:'Hold, but keep an eye on a couple',
+      body:`No urgent moves needed, but ${monitors.length} player${monitors.length>1?'s are':' is'} worth watching.`,
+      bullets:[
+        ...monitors.map(p=>`${p.web_name}: ${p.flags.join(', ')}`),
+        'Save your free transfer unless a better opportunity appears'
+      ]
+    };
+  } else {
+    return{
+      type:'hold',
+      headline:'Hold your transfers this week',
+      body:'Your squad looks solid. No urgent concerns flagged — save your free transfer and let it roll.',
+      bullets:[
+        `${analysis.filter(p=>p.verdict==='hold').length} players are in hold territory`,
+        topCandidate?`Best available if you do transfer in: ${topCandidate.web_name}`:null
+      ].filter(Boolean)
+    };
+  }
+}
+
+function renderTransfers(){
+  const myPlayers=state.myTeamIds.map(id=>state.players.find(p=>p.id===id)).filter(Boolean);
+  const expertIds=new Set(state.expertPicks.map(e=>Number(e.playerId)));
+  const myIds=new Set(state.myTeamIds);
+
+  const analysis=myPlayers.map(p=>{
+    const fdr=customFDR(p.team);
+    const form=parseFloat(p.form)||0;
+    const score=transferScore(p);
+    const flags=[];
+    if(form<3) flags.push('Cold form');
+    if(fdr&&fdr>=3.8) flags.push('Tough fixture run');
+    if(p.chance_of_playing_next_round!==null&&p.chance_of_playing_next_round<75)
       flags.push(`Injury doubt (${p.chance_of_playing_next_round}%)`);
-    if ((p.transfers_out_event||0) > (p.transfers_in_event||0) * 1.5)
+    if((p.transfers_out_event||0)>(p.transfers_in_event||0)*1.5)
       flags.push('Heavily transferred out');
-    const verdict = flags.length === 0 ? 'hold' : flags.length === 1 ? 'monitor' : 'out';
-    const label = { hold:'HOLD', monitor:'MONITOR', out:'CONSIDER OUT' }[verdict];
-    return { ...p, fd, flags, verdict, label };
+    const verdict=flags.length===0?'hold':flags.length===1?'monitor':'out';
+    const label={hold:'HOLD',monitor:'MONITOR',out:'CONSIDER OUT'}[verdict];
+    return{...p,fdr,flags,verdict,label,score};
   });
 
-  const myIds = new Set(state.myTeamIds);
-  const candidates = state.players
-    .filter(p => p.minutes > 270 && !myIds.has(p.id))
-    .map(p => {
-      const fd = fixtureDifficulty(p.team);
-      const expertBoost = expertIds.has(p.id) ? 1.5 : 0;
-      const fixtureBoost = fd ? (5 - fd) / 2 : 0;
-      return { ...p, fd, score: parseFloat(p.form) + fixtureBoost + expertBoost, isExpert: expertIds.has(p.id) };
-    })
-    .sort((a,b)=>b.score-a.score).slice(0, 8);
+  const candidates=state.players
+    .filter(p=>p.minutes>270&&!myIds.has(p.id))
+    .map(p=>({
+      ...p,
+      fdr:customFDR(p.team),
+      score:transferScore(p),
+      isExpert:expertIds.has(p.id)
+    }))
+    .sort((a,b)=>b.score-a.score).slice(0,10);
 
-  const squadRows = analysis.length === 0
-    ? `<div class="empty">No squad set yet — head to My Team to add your 15.</div>`
-    : analysis.map(p => `
+  const rec=myPlayers.length>0?generateGWRecommendation(analysis,candidates):null;
+  const recColors={hold:'var(--up)',act:'var(--amber)',urgent:'var(--down)'};
+
+  const recBlock=rec?`
+    <div class="gw-rec ${rec.type}">
+      <div class="gw-rec-label" style="color:${recColors[rec.type]}">GW RECOMMENDATION</div>
+      <div class="gw-rec-title" style="color:${recColors[rec.type]}">${rec.headline}</div>
+      <div class="gw-rec-body">${rec.body}</div>
+      <ul class="gw-rec-bullets">${rec.bullets.map(b=>`<li>${b}</li>`).join('')}</ul>
+    </div>`:
+    `<div class="tip-box">Add your squad in My Team to get a personalised GW recommendation here.</div>`;
+
+  const squadRows=analysis.length===0
+    ?`<div class="empty">No squad set yet — head to My Team to add your 15.</div>`
+    :analysis.map(p=>`
       <div class="transfer-row ${p.verdict}">
-        <div>
-          <div style="font-size:13px;font-weight:600">${posTag(POSMAP[p.element_type])} &nbsp;${p.web_name} <span class="text-muted" style="font-weight:400">(${state.teamById[p.team]?.short_name||''})</span></div>
-          ${p.flags.length ? `<div style="font-size:11px;color:var(--muted);margin-top:3px">${p.flags.join(' · ')}</div>` : ''}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600">${posTag(POSMAP[p.element_type])} &nbsp;${p.web_name} <span class="text-muted" style="font-weight:400;font-size:12px">(${state.teamById[p.team]?.short_name||''})</span></div>
+          ${p.flags.length?`<div style="font-size:11px;color:var(--muted);margin-top:3px">${p.flags.join(' · ')}</div>`:''}
         </div>
         <span class="verdict verdict-${p.verdict}">${p.label}</span>
       </div>`).join('');
 
-  const candidateRows = candidates.map(p => `
+  const candidateRows=candidates.map((p,i)=>`
     <tr>
+      <td style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace">${i+1}</td>
       <td>${posTag(POSMAP[p.element_type])} &nbsp;${p.web_name}</td>
-      <td class="text-muted">${state.teamById[p.team]?.short_name||''}</td>
-      <td class="mono">${p.form}</td>
-      <td class="mono">${p.fd ? p.fd.toFixed(1) : '–'}</td>
-      <td>${p.isExpert ? '<span class="text-amber">✓</span>' : '<span class="text-muted">–</span>'}</td>
-      <td class="mono">£${(p.now_cost/10).toFixed(1)}m</td>
+      <td class="text-muted" style="font-size:12px">${state.teamById[p.team]?.short_name||''}</td>
+      <td class="mono" style="font-size:12px">${p.form}</td>
+      <td class="mono" style="font-size:12px;color:${fdrColor(p.fdr)}">${fdrLabel(p.fdr)}</td>
+      <td style="font-size:12px">${p.isExpert?'<span class="text-amber">✓</span>':'<span class="text-muted">–</span>'}</td>
+      <td class="mono" style="font-size:12px">£${(p.now_cost/10).toFixed(1)}m</td>
     </tr>`).join('');
 
-  return `
+  return`
+    ${recBlock}
     <div class="card">
-      <div class="card-title">Your squad — transfer worthiness</div>
-      <div class="card-sub">${myPlayers.length === 0 ? 'Add your squad in My Team first' : 'Flags combine form, fixtures, injury status and transfer trends'}</div>
+      <div class="card-title">Your squad</div>
+      <div class="card-sub">Scored on form, fixtures, stats, and value. Flags are independent of transfer candidates.</div>
       ${squadRows}
     </div>
     <div class="card">
       <div class="card-title">Transfer-in candidates</div>
-      <div class="card-sub">Ranked by form, fixture ease, and expert backing</div>
+      <div class="card-sub">Ranked by form (35%) + fixture ease (25%) + stat composite (25%) + value (10%) + expert backing (5%)</div>
       <table>
-        <thead><tr><th>Player</th><th>Team</th><th>Form</th><th>Next 5 FDR</th><th>Expert</th><th>Price</th></tr></thead>
+        <thead><tr><th>#</th><th>Player</th><th>Team</th><th>Form</th><th>FDR</th><th>Expert</th><th>£</th></tr></thead>
         <tbody>${candidateRows}</tbody>
       </table>
     </div>`;
 }
 
+function bindTransfers(){}
+
+// ── BUILD TEAM HISTORY from fixtures ─────────────────────────────────
+function buildTeamHistory(){
+  const history={};
+  state.fixtures.filter(f=>f.finished&&f.team_h_score!=null).forEach(f=>{
+    if(!history[f.team_h]) history[f.team_h]=[];
+    if(!history[f.team_a]) history[f.team_a]=[];
+    history[f.team_h].push({event:f.event,scored:f.team_h_score,conceded:f.team_a_score,was_home:true});
+    history[f.team_a].push({event:f.event,scored:f.team_a_score,conceded:f.team_h_score,was_home:false});
+  });
+  state.teamHistory=history;
+}
+
 // ── INIT ──────────────────────────────────────────────────────────────
-async function init() {
-  try {
-    const bs = await fplFetch('bootstrap-static/');
-    if (!bs || !bs.elements) throw new Error('Invalid data from proxy');
+async function init(){
+  try{
+    const bs=await fplFetch('bootstrap-static/');
+    if(!bs||!bs.elements) throw new Error('Invalid data from proxy');
+    state.players=bs.elements;
+    state.teams=bs.teams;
+    state.teamById={};
+    bs.teams.forEach(t=>state.teamById[t.id]=t);
+    const events=bs.events||[];
+    const anyFinished=events.some(e=>e.finished);
+    document.getElementById('season-label').textContent=
+      `FPL ANALYTICS · ${anyFinished?'2025/26 SEASON DATA':'PRE-SEASON'}`;
 
-    state.players = bs.elements;
-    state.teams = bs.teams;
-    state.teamById = {};
-    bs.teams.forEach(t => state.teamById[t.id] = t);
+    const fx=await fplFetch('fixtures/?return_scores=1');
+    state.fixtures=fx||[];
+    buildTeamHistory();
 
-    const events = bs.events || [];
-    const anyFinished = events.some(e => e.finished);
-    document.getElementById('season-label').textContent =
-      `FPL ANALYTICS · ${anyFinished ? '2025/26 SEASON DATA' : 'PRE-SEASON'}`;
+    state.myTeamIds=lsGet('fpl_my_team',[]);
+    state.captainId=lsGet('fpl_captain',null);
+    state.expertPicks=lsGet('fpl_expert_picks',[]);
 
-    const fx = await fplFetch('fixtures/');
-    state.fixtures = fx || [];
-
-    state.myTeamIds = lsGet('fpl_my_team', []);
-    state.expertPicks = lsGet('fpl_expert_picks', []);
-
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('content').style.display = 'block';
+    document.getElementById('loading').style.display='none';
+    document.getElementById('content').style.display='block';
     render();
-  } catch(e) {
-    document.getElementById('loading').innerHTML = `
-      <div class="card error-card" style="text-align:left">
+  } catch(e){
+    document.getElementById('loading').innerHTML=`
+      <div class="card" style="border-color:var(--down);text-align:left">
         <div class="card-title">Couldn't load data</div>
-        <div class="error-msg" style="margin-top:8px">${e.message}</div>
+        <div style="font-size:13px;color:var(--down);font-family:'JetBrains Mono',monospace;margin-top:8px">${e.message}</div>
         <div style="font-size:12px;color:var(--muted);margin-top:8px">Try reloading the page.</div>
         <button class="btn btn-primary" style="margin-top:12px" onclick="location.reload()">Retry</button>
       </div>`;
   }
 }
-
 init();
 </script>
 </body>
