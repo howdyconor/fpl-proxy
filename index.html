@@ -76,7 +76,9 @@
   .player-card .pc-pos { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; color: var(--green); display: block; }
   .player-card .pc-name { font-size: 11px; font-weight: 600; color: #1C231F; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .player-card .pc-pts { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); display: block; }
+  .pc-actions { display: flex; gap: 2px; margin-top: 4px; justify-content: center; }
   .player-card.captain { border-color: var(--amber); background: #FFFBF0; }
+  .player-card.vc { border-color: #7FAEDB; background: #F0F7FF; }
   .bench-strip { display: flex; gap: 6px; justify-content: center; padding: 10px 8px 4px; border-top: 2px dashed rgba(255,255,255,0.2); margin-top: 8px; }
   .bench-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: rgba(255,255,255,0.5); text-align: center; margin-bottom: 4px; letter-spacing: 0.04em; }
 
@@ -137,10 +139,10 @@ const POSMAP = { 1:'GKP', 2:'DEF', 3:'MID', 4:'FWD' };
 
 let state = {
   players:[], teams:[], fixtures:[], teamById:{},
-  myTeamIds:[], captainId:null, viceCaptainId:null,
+  myTeamIds:[], captainId:null, viceCaptainId:null, benchIds:[],
   expertPicks:[], activeTab:'team',
   statsPos:'MID', valuePos:'ALL', expertsGW:'all',
-  teamHistory:{} // teamId -> [{event, scored, conceded, was_home}]
+  teamHistory:{}
 };
 
 // ── STORAGE ──────────────────────────────────────────────────────────
@@ -268,14 +270,14 @@ function transferScore(player){
   const stats = compositeScore(player);
   const ppm = player.total_points/(player.now_cost/10);
   const expertIds = new Set(state.expertPicks.map(e=>Number(e.playerId)));
-  const expertBoost = expertIds.has(player.id) ? 0.15 : 0; // mild signal, not dominant
+  const expertBoost = expertIds.has(player.id) ? 0.15 : 0; // meaningful signal
 
   // Normalise each component 0-1 approx
   const formScore = Math.min(form/12, 1);
   const fixtureScore = Math.max(0, (5-fdr)/4);
   const ppmScore = Math.min(ppm/30, 1);
 
-  return (formScore*0.35) + (fixtureScore*0.25) + (stats*0.25) + (ppmScore*0.1) + (expertBoost*0.05);
+  return (formScore*0.32) + (fixtureScore*0.23) + (stats*0.23) + (ppmScore*0.1) + (expertBoost*0.12);
 }
 
 // ── RENDER ────────────────────────────────────────────────────────────
@@ -301,10 +303,14 @@ function renderTeam(){
   const mids=sorted.filter(p=>p.element_type===3);
   const fwds=sorted.filter(p=>p.element_type===4);
 
-  // First 11 vs bench (simple: first GKP, best of each position)
-  const xi=[...gkps.slice(0,1),...defs.slice(0,Math.min(4,defs.length)),...mids.slice(0,Math.min(4,mids.length)),...fwds.slice(0,Math.min(2,fwds.length))].slice(0,11);
-  const benchIds=new Set(myPlayers.filter(p=>!xi.includes(p)).map(p=>p.id));
-  const bench=myPlayers.filter(p=>benchIds.has(p.id));
+  // Split XI vs bench using persisted benchIds, fallback to automatic
+  const autoBench=new Set();
+  const autoXi=[...gkps.slice(0,1),...defs.slice(0,4),...mids.slice(0,4),...fwds.slice(0,2)].slice(0,11);
+  myPlayers.forEach(p=>{ if(!autoXi.includes(p)) autoBench.add(p.id); });
+  const userBenchIds=new Set(state.benchIds.filter(id=>state.myTeamIds.includes(id)));
+  const effectiveBench=userBenchIds.size>0?userBenchIds:autoBench;
+  const bench=myPlayers.filter(p=>effectiveBench.has(p.id));
+  const benchSet=effectiveBench;
 
   function playerCard(p,isBench=false){
     const isCap=p.id===state.captainId;
@@ -363,18 +369,32 @@ function bindTeam(){
   });
 }
 
-let _tapState={};
-window.cyclePlayerAction=function(id){
-  // First tap: set captain. Second tap: remove.
-  if(_tapState[id]==='captain'){
+window.setRole=function(id,role){
+  if(role==='captain'){
+    if(state.captainId===id){state.captainId=null;}
+    else{
+      if(state.viceCaptainId===id) state.viceCaptainId=null;
+      state.captainId=id;
+    }
+  } else if(role==='vc'){
+    if(state.viceCaptainId===id){state.viceCaptainId=null;}
+    else{
+      if(state.captainId===id) state.captainId=null;
+      state.viceCaptainId=id;
+    }
+  } else if(role==='bench'){
+    // Toggle bench status
+    const inBench=state.benchIds.includes(id);
+    if(inBench){state.benchIds=state.benchIds.filter(x=>x!==id);}
+    else{state.benchIds=[...state.benchIds,id];}
+    lsSet('fpl_bench',state.benchIds);
+  } else if(role==='remove'){
     removePlayer(id);
-    delete _tapState[id];
-  } else {
-    state.captainId=id;
-    _tapState={[id]:'captain'};
-    lsSet('fpl_captain',id);
-    render();
+    return;
   }
+  lsSet('fpl_captain',state.captainId);
+  lsSet('fpl_vc',state.viceCaptainId);
+  render();
 };
 window.addPlayer=function(id){
   if(state.myTeamIds.length>=15)return;
@@ -637,7 +657,7 @@ function bindExperts(){
         const gwVal=document.getElementById('expert-gw').value.trim();
         const resp=await fetch('https://api.anthropic.com/v1/messages',{
           method:'POST',
-          headers:{'Content-Type':'application/json'},
+          headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
           body:JSON.stringify({
             model:'claude-sonnet-4-6',
             max_tokens:1000,
@@ -903,6 +923,8 @@ async function init(){
 
     state.myTeamIds=lsGet('fpl_my_team',[]);
     state.captainId=lsGet('fpl_captain',null);
+    state.viceCaptainId=lsGet('fpl_vc',null);
+    state.benchIds=lsGet('fpl_bench',[]);
     state.expertPicks=lsGet('fpl_expert_picks',[]);
 
     document.getElementById('loading').style.display='none';
