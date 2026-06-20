@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TEAM SHEET · FPL Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Source+Sans+3:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #0B3D2E;
+    --cream: #F2EFE6;
+    --amber: #E8A33D;
+    --muted: #8C948F;
+    --border: #DDD8C8;
+    --up: #5E8C6A;
+    --down: #B5503D;
+    --display: 'Oswald', sans-serif;
+    --body: 'Source Sans 3', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--body); background: var(--cream); color: #1C231F; min-height: 100vh; }
+  button { font-family: inherit; cursor: pointer; }
+  input, select { font-family: inherit; }
+
+  /* Header */
+  #header { padding: 16px 20px 12px; border-bottom: 1px solid var(--border); background: var(--cream); }
+  #header h1 { font-family: var(--display); font-size: 22px; color: var(--green); letter-spacing: 0.01em; display: inline; }
+  #header .sub { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0.04em; margin-left: 10px; }
+
+  /* Tab rail */
+  #tabrail { display: flex; overflow-x: auto; background: var(--green); border-bottom: 2px solid var(--green); }
+  #tabrail button { flex: 0 0 auto; padding: 12px 16px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase; border: none; border-right: 1px solid rgba(255,255,255,0.08); background: transparent; color: #C9D6CC; font-weight: 500; transition: background 0.15s; }
+  #tabrail button.active { background: var(--cream); color: var(--green); font-weight: 700; }
+
+  /* Main content */
+  #main { padding: 16px; max-width: 980px; margin: 0 auto; }
+
+  /* Cards */
+  .card { background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 16px 18px; margin-bottom: 14px; }
+  .card-title { font-family: var(--display); font-size: 15px; color: var(--green); font-weight: 700; letter-spacing: 0.01em; }
+  .card-sub { font-size: 12px; color: var(--muted); margin-top: 2px; margin-bottom: 10px; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  td { padding: 7px 8px; font-size: 13px; border-bottom: 1px solid #EDEAE0; }
+  tr:hover td { background: #FAF8F2; }
+
+  /* Pos tags */
+  .pos { font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; padding: 2px 6px; border-radius: 3px; color: var(--green); font-weight: 700; }
+  .pos-GKP { background: #E8A33D; }
+  .pos-DEF { background: #6FA88A; }
+  .pos-MID { background: #7FAEDB; }
+  .pos-FWD { background: #E0654D; }
+
+  /* Inputs */
+  .input { width: 100%; padding: 9px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; outline: none; margin-bottom: 8px; }
+  .input:focus { border-color: var(--green); }
+
+  /* Buttons */
+  .btn { padding: 9px 16px; border-radius: 4px; border: none; font-size: 13px; font-weight: 600; }
+  .btn-primary { background: var(--green); color: #fff; }
+  .btn-primary:disabled { background: #C9D6CC; cursor: not-allowed; }
+  .btn-danger { background: none; border: none; color: var(--down); font-size: 12px; }
+
+  /* Pos filter buttons */
+  .pos-filters { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .pos-filter { padding: 6px 12px; border-radius: 4px; border: 1px solid var(--border); background: #fff; color: #1C231F; font-size: 12px; font-family: var(--mono); }
+  .pos-filter.active { border-color: var(--green); background: var(--green); color: #fff; }
+
+  /* Dropdown */
+  .dropdown { border: 1px solid #EDEAE0; border-radius: 4px; margin-bottom: 8px; overflow: hidden; }
+  .dropdown-item { padding: 8px 10px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #F2EFE6; display: flex; justify-content: space-between; }
+  .dropdown-item:hover { background: #FAF8F2; }
+  .dropdown-item:last-child { border-bottom: none; }
+
+  /* Bar chart rows */
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .bar-label { font-size: 12px; width: 100px; color: #5C6B66; flex-shrink: 0; }
+  .bar-track { flex: 1; background: #EDEAE0; height: 8px; border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; }
+  .bar-val { font-family: var(--mono); font-size: 12px; width: 42px; text-align: right; flex-shrink: 0; }
+
+  /* Empty state */
+  .empty { padding: 28px 16px; text-align: center; color: var(--muted); font-size: 13px; font-style: italic; }
+
+  /* Error card */
+  .error-card { border-color: var(--down) !important; }
+  .error-msg { font-size: 13px; color: var(--down); font-family: var(--mono); }
+
+  /* Loading */
+  #loading { padding: 40px; text-align: center; color: var(--muted); font-family: var(--mono); font-size: 13px; letter-spacing: 0.04em; }
+
+  /* Transfer verdict badges */
+  .verdict { font-family: var(--mono); font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 10px; }
+  .verdict-hold { color: var(--up); border: 1px solid var(--up); }
+  .verdict-monitor { color: #A8791E; border: 1px solid #A8791E; }
+  .verdict-out { color: var(--down); border: 1px solid var(--down); }
+
+  /* Transfer row */
+  .transfer-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border: 1px solid #EDEAE0; border-radius: 5px; margin-bottom: 8px; }
+  .transfer-row.hold { background: #FAFCF8; }
+  .transfer-row.monitor { background: #FFFBF0; }
+  .transfer-row.out { background: #FDF4F1; }
+
+  /* Two col grid */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 500px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* Price watch rows */
+  .price-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #F2EFE6; font-size: 13px; }
+
+  /* Expert consensus badge */
+  .consensus-badge { font-family: var(--mono); font-size: 12px; font-weight: 700; background: var(--green); color: #fff; padding: 2px 8px; border-radius: 10px; }
+
+  /* Tip box */
+  .tip-box { background: #FBF6E9; border: 1px solid var(--amber); border-radius: 6px; padding: 12px 14px; font-size: 12px; color: #7A5A1E; margin-bottom: 14px; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { height: 8px; width: 8px; }
+  ::-webkit-scrollbar-thumb { background: #C9D6CC; border-radius: 4px; }
+
+  footer { padding: 20px; text-align: center; font-size: 11px; color: var(--muted); font-family: var(--mono); letter-spacing: 0.04em; }
+
+  .mono { font-family: var(--mono); }
+  .text-muted { color: var(--muted); }
+  .text-up { color: var(--up); }
+  .text-down { color: var(--down); }
+  .text-amber { color: var(--amber); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>TEAM SHEET</h1>
+  <span class="sub" id="season-label">FPL ANALYTICS · LOADING</span>
+</div>
+
+<div id="tabrail">
+  <button class="active" data-tab="team">My Team</button>
+  <button data-tab="stats">Stats</button>
+  <button data-tab="value">Value &amp; Form</button>
+  <button data-tab="experts">Experts</button>
+  <button data-tab="differentials">Differentials</button>
+  <button data-tab="transfers">Transfer Advice</button>
+</div>
+
+<div id="main">
+  <div id="loading">PULLING LIVE DATA FROM FPL API…</div>
+  <div id="content" style="display:none"></div>
+</div>
+
+<footer>DATA: OFFICIAL FPL API · UPDATES LIVE ON EACH LOAD</footer>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────
+const PROXY = '/api/fpl';
+const POSMAP = { 1:'GKP', 2:'DEF', 3:'MID', 4:'FWD' };
+
+// ── STATE ───────────────────────────────────────────────────────────
+let state = {
+  players: [], teams: [], fixtures: [], teamById: {},
+  myTeamIds: [], expertPicks: [], activeTab: 'team',
+  statsPos: 'MID', valuePos: 'ALL'
+};
+
+// ── STORAGE ─────────────────────────────────────────────────────────
+function lsGet(key, fallback) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+  catch { return fallback; }
+}
+function lsSet(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
+
+// ── FETCH ───────────────────────────────────────────────────────────
+async function fplFetch(path) {
+  const res = await fetch(`${PROXY}?path=${encodeURIComponent(path)}`);
+  if (!res.ok) throw new Error(`Proxy error ${res.status}`);
+  return res.json();
+}
+
+// ── TABS ─────────────────────────────────────────────────────────────
+document.querySelectorAll('#tabrail button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#tabrail button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.activeTab = btn.dataset.tab;
+    render();
+  });
+});
+
+// ── HELPERS ──────────────────────────────────────────────────────────
+function posTag(pos) {
+  return `<span class="pos pos-${pos}">${pos}</span>`;
+}
+
+function fixtureDifficulty(teamId, lookahead = 5) {
+  const upcoming = state.fixtures
+    .filter(f => !f.finished && (f.team_h === teamId || f.team_a === teamId))
+    .slice(0, lookahead);
+  if (!upcoming.length) return null;
+  const diffs = upcoming.map(f => f.team_h === teamId ? f.team_h_difficulty : f.team_a_difficulty);
+  return diffs.reduce((a, b) => a + b, 0) / diffs.length;
+}
+
+function pearson(xs, ys) {
+  const n = xs.length;
+  if (n < 2) return 0;
+  const mx = xs.reduce((a,b) => a+b,0)/n, my = ys.reduce((a,b) => a+b,0)/n;
+  let num=0, dx2=0, dy2=0;
+  for (let i=0;i<n;i++) { const dx=xs[i]-mx,dy=ys[i]-my; num+=dx*dy; dx2+=dx*dx; dy2+=dy*dy; }
+  const d = Math.sqrt(dx2*dy2);
+  return d===0 ? 0 : num/d;
+}
+
+// ── RENDER ───────────────────────────────────────────────────────────
+function render() {
+  const el = document.getElementById('content');
+  switch(state.activeTab) {
+    case 'team': el.innerHTML = renderTeam(); bindTeam(); break;
+    case 'stats': el.innerHTML = renderStats(); bindStats(); break;
+    case 'value': el.innerHTML = renderValue(); bindValue(); break;
+    case 'experts': el.innerHTML = renderExperts(); bindExperts(); break;
+    case 'differentials': el.innerHTML = renderDifferentials(); break;
+    case 'transfers': el.innerHTML = renderTransfers(); break;
+  }
+}
+
+// ── MY TEAM ──────────────────────────────────────────────────────────
+function renderTeam() {
+  const myPlayers = state.myTeamIds.map(id => state.players.find(p => p.id === id)).filter(Boolean);
+  const totalCost = myPlayers.reduce((s,p) => s + p.now_cost, 0) / 10;
+  const rows = myPlayers.length === 0
+    ? `<div class="empty">Search above to add your squad — nothing here yet.</div>`
+    : `<table>
+        <thead><tr><th></th><th>Player</th><th>Team</th><th>Price</th><th>Pts</th><th>Form</th><th></th></tr></thead>
+        <tbody>
+        ${[...myPlayers].sort((a,b)=>a.element_type-b.element_type).map(p => `
+          <tr>
+            <td>${posTag(POSMAP[p.element_type])}</td>
+            <td>${p.web_name}</td>
+            <td class="text-muted">${state.teamById[p.team]?.short_name||''}</td>
+            <td class="mono">£${(p.now_cost/10).toFixed(1)}m</td>
+            <td class="mono">${p.total_points}</td>
+            <td class="mono">${p.form}</td>
+            <td><button class="btn-danger" onclick="removePlayer(${p.id})">remove</button></td>
+          </tr>`).join('')}
+        </tbody></table>`;
+
+  return `
+    <div class="card">
+      <div class="card-title">Build your squad</div>
+      <div class="card-sub">Search and add your 15 FPL players. Saved automatically.</div>
+      <input class="input" id="player-search" placeholder="Search player name…" autocomplete="off">
+      <div id="search-results"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Squad (${myPlayers.length}/15)</div>
+      ${myPlayers.length ? `<div class="card-sub">Total value: £${totalCost.toFixed(1)}m</div>` : ''}
+      ${rows}
+    </div>`;
+}
+
+function bindTeam() {
+  const input = document.getElementById('player-search');
+  const results = document.getElementById('search-results');
+  input.addEventListener('input', () => {
+    const q = input.value.toLowerCase().trim();
+    if (!q) { results.innerHTML = ''; return; }
+    const matches = state.players
+      .filter(p => p.web_name.toLowerCase().includes(q) && !state.myTeamIds.includes(p.id))
+      .slice(0, 8);
+    results.innerHTML = matches.length ? `<div class="dropdown">${matches.map(p =>
+      `<div class="dropdown-item" onclick="addPlayer(${p.id})">
+        <span>${posTag(POSMAP[p.element_type])} &nbsp;${p.web_name} <span class="text-muted">(${state.teamById[p.team]?.short_name||''})</span></span>
+        <span class="mono">£${(p.now_cost/10).toFixed(1)}m</span>
+      </div>`).join('')}</div>` : '';
+  });
+}
+
+window.addPlayer = function(id) {
+  if (state.myTeamIds.length >= 15) return;
+  state.myTeamIds = [...state.myTeamIds, id];
+  lsSet('fpl_my_team', state.myTeamIds);
+  render();
+};
+window.removePlayer = function(id) {
+  state.myTeamIds = state.myTeamIds.filter(x => x !== id);
+  lsSet('fpl_my_team', state.myTeamIds);
+  render();
+};
+
+// ── STATS ─────────────────────────────────────────────────────────────
+const STAT_FIELDS = [
+  { key:'expected_goal_involvements', label:'xGI' },
+  { key:'expected_goals', label:'xG' },
+  { key:'expected_assists', label:'xA' },
+  { key:'influence', label:'Influence' },
+  { key:'creativity', label:'Creativity' },
+  { key:'threat', label:'Threat' },
+  { key:'ict_index', label:'ICT Index' },
+  { key:'bps', label:'BPS' },
+  { key:'minutes', label:'Minutes' },
+  { key:'clean_sheets', label:'Clean sheets' },
+  { key:'saves', label:'Saves' },
+];
+
+function renderStats() {
+  const pos = state.statsPos;
+  const filtered = state.players.filter(p => POSMAP[p.element_type] === pos && p.minutes > 270);
+  const pts = filtered.map(p => p.total_points);
+
+  const correlations = STAT_FIELDS.map(f => {
+    const vals = filtered.map(p => parseFloat(p[f.key]) || 0);
+    return { ...f, r: pearson(vals, pts) };
+  }).sort((a,b) => Math.abs(b.r) - Math.abs(a.r));
+
+  const valueRanked = [...filtered]
+    .map(p => ({ ...p, ppm: p.total_points / (p.now_cost/10) }))
+    .sort((a,b) => b.ppm - a.ppm).slice(0, 12);
+
+  const filterBtns = ['GKP','DEF','MID','FWD'].map(p =>
+    `<button class="pos-filter ${p===pos?'active':''}" data-pos="${p}">${p}</button>`).join('');
+
+  const bars = correlations.map(c => `
+    <div class="bar-row">
+      <span class="bar-label">${c.label}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.abs(c.r)*100}%;background:${c.r>=0?'#5E8C6A':'#B5503D'}"></div></div>
+      <span class="bar-val">${c.r.toFixed(2)}</span>
+    </div>`).join('');
+
+  const valRows = valueRanked.map(p => `
+    <tr>
+      <td>${p.web_name}</td>
+      <td class="text-muted">${state.teamById[p.team]?.short_name||''}</td>
+      <td class="mono">£${(p.now_cost/10).toFixed(1)}m</td>
+      <td class="mono">${p.total_points}</td>
+      <td class="mono" style="font-weight:700;color:var(--green)">${p.ppm.toFixed(1)}</td>
+    </tr>`).join('');
+
+  return `
+    <div class="card">
+      <div class="card-title">What correlates to points?</div>
+      <div class="card-sub">Minimum 270 minutes played · ${filtered.length} players in sample</div>
+      <div class="pos-filters" id="stats-filters">${filterBtns}</div>
+      ${filtered.length < 5 ? `<div class="empty">Not enough players with sufficient minutes yet.</div>` : bars}
+    </div>
+    <div class="card">
+      <div class="card-title">Best value: points per £1m</div>
+      <div class="card-sub">Top ${pos} performers relative to price</div>
+      <table>
+        <thead><tr><th>Player</th><th>Team</th><th>Price</th><th>Pts</th><th>Pts/£m</th></tr></thead>
+        <tbody>${valRows}</tbody>
+      </table>
+    </div>`;
+}
+
+function bindStats() {
+  document.querySelectorAll('#stats-filters .pos-filter').forEach(btn => {
+    btn.addEventListener('click', () => { state.statsPos = btn.dataset.pos; render(); });
+  });
+}
+
+// ── VALUE & FORM ──────────────────────────────────────────────────────
+function renderValue() {
+  const pos = state.valuePos;
+  const filtered = state.players
+    .filter(p => p.minutes > 90)
+    .filter(p => pos === 'ALL' || POSMAP[p.element_type] === pos)
+    .map(p => {
+      const fd = fixtureDifficulty(p.team);
+      const net = (p.transfers_in_event||0) - (p.transfers_out_event||0);
+      return { ...p, fd, net };
+    })
+    .sort((a,b) => parseFloat(b.form) - parseFloat(a.form));
+
+  const filterBtns = ['ALL','GKP','DEF','MID','FWD'].map(p =>
+    `<button class="pos-filter ${p===pos?'active':''}" data-pos="${p}">${p}</button>`).join('');
+
+  const rows = filtered.slice(0,15).map(p => {
+    const form = parseFloat(p.form);
+    const goodForm = form >= 5, easyRun = p.fd && p.fd <= 2.6, hardRun = p.fd && p.fd >= 3.6;
+    let read = 'Steady', readColor = 'var(--muted)';
+    if (goodForm && easyRun) { read = 'In-form + easy run'; readColor = 'var(--up)'; }
+    else if (goodForm && hardRun) { read = 'In-form but tough run'; readColor = 'var(--amber)'; }
+    else if (!goodForm && easyRun) { read = 'Cold, fixtures turn'; readColor = '#7FAEDB'; }
+    return `<tr>
+      <td>${posTag(POSMAP[p.element_type])} &nbsp;${p.web_name}</td>
+      <td class="text-muted">${state.teamById[p.team]?.short_name||''}</td>
+      <td class="mono">${p.form}</td>
+      <td class="mono">${p.fd ? p.fd.toFixed(1) : '–'}</td>
+      <td style="color:${readColor};font-size:12px;font-weight:600">${read}</td>
+    </tr>`;
+  }).join('');
+
+  const risers = [...filtered].sort((a,b)=>b.net-a.net).slice(0,6);
+  const fallers = [...filtered].sort((a,b)=>a.net-b.net).slice(0,6);
+
+  return `
+    <div class="card">
+      <div class="card-title">Form vs upcoming fixtures</div>
+      <div class="card-sub">Form = FPL rolling metric · FDR averages next 5 games (1 easy – 5 hard)</div>
+      <div class="pos-filters" id="value-filters">${filterBtns}</div>
+      <table>
+        <thead><tr><th>Player</th><th>Team</th><th>Form</th><th>Next 5 FDR</th><th>Read</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Price rise watch</div>
+        <div class="card-sub">Highest net transfers in</div>
+        ${risers.map(p=>`<div class="price-row"><span><span class="text-up">▲</span> ${p.web_name}</span><span class="mono text-muted">+${p.net.toLocaleString()}</span></div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="card-title">Price drop watch</div>
+        <div class="card-sub">Highest net transfers out</div>
+        ${fallers.map(p=>`<div class="price-row"><span><span class="text-down">▼</span> ${p.web_name}</span><span class="mono text-muted">${p.net.toLocaleString()}</span></div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function bindValue() {
+  document.querySelectorAll('#value-filters .pos-filter').forEach(btn => {
+    btn.addEventListener('click', () => { state.valuePos = btn.dataset.pos; render(); });
+  });
+}
+
+// ── EXPERTS ───────────────────────────────────────────────────────────
+let expertSearch = { query:'', selected: null };
+
+function renderExperts() {
+  const picks = state.expertPicks;
+  const consensus = {};
+  picks.forEach(e => {
+    if (!consensus[e.playerId]) consensus[e.playerId] = { name: e.playerName, count: 0, experts: [] };
+    consensus[e.playerId].count++;
+    consensus[e.playerId].experts.push(e.expert);
+  });
+  const sorted = Object.entries(consensus).sort((a,b)=>b[1].count-a[1].count);
+
+  const playerVal = expertSearch.selected
+    ? `${expertSearch.selected.web_name} ✓`
+    : expertSearch.query;
+
+  return `
+    <div class="card">
+      <div class="card-title">Log an expert pick</div>
+      <div class="card-sub">No API exists for social media expert teams — log what you see and the app builds consensus from it.</div>
+      <input class="input" id="expert-name" placeholder="Expert / source name (e.g. FPL Mate)" value="">
+      <input class="input" id="expert-player" placeholder="Player they picked…" value="${playerVal}" autocomplete="off">
+      <div id="expert-results"></div>
+      <input class="input" id="expert-note" placeholder="Note (optional) — e.g. captain pick, wildcard target">
+      <button class="btn btn-primary" id="add-pick-btn">Add pick</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Consensus (${picks.length} picks logged)</div>
+      <div class="card-sub">Players appearing across the most expert sources</div>
+      ${sorted.length === 0
+        ? `<div class="empty">Log a few picks above to see consensus build up.</div>`
+        : sorted.map(([id, c]) => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #F2EFE6">
+            <span style="font-size:13px">${c.name}</span>
+            <span style="font-size:12px;color:var(--muted)">${c.experts.join(', ')}</span>
+            <span class="consensus-badge">${c.count}</span>
+          </div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="card-title">All logged picks</div>
+      ${picks.length === 0
+        ? `<div class="empty">Nothing logged yet.</div>`
+        : picks.map(e => `
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #F2EFE6;font-size:13px">
+            <span><strong>${e.expert}</strong> → ${e.playerName}${e.note?` <span class="text-muted">(${e.note})</span>`:''}</span>
+            <button class="btn-danger" onclick="removePick('${e.id}')">remove</button>
+          </div>`).join('')}
+    </div>`;
+}
+
+function bindExperts() {
+  const playerInput = document.getElementById('expert-player');
+  const results = document.getElementById('expert-results');
+
+  playerInput.addEventListener('input', () => {
+    expertSearch.selected = null;
+    expertSearch.query = playerInput.value;
+    const q = playerInput.value.toLowerCase().trim();
+    if (!q) { results.innerHTML = ''; return; }
+    const matches = state.players.filter(p => p.web_name.toLowerCase().includes(q)).slice(0, 6);
+    results.innerHTML = matches.length ? `<div class="dropdown">${matches.map(p =>
+      `<div class="dropdown-item" onclick="selectExpertPlayer(${p.id},'${p.web_name.replace(/'/g,"\\'")}')">
+        ${p.web_name} <span class="text-muted">(${state.teamById[p.team]?.short_name||''})</span>
+      </div>`).join('')}</div>` : '';
+  });
+
+  document.getElementById('add-pick-btn').addEventListener('click', () => {
+    const expert = document.getElementById('expert-name').value.trim();
+    const note = document.getElementById('expert-note').value.trim();
+    if (!expert || !expertSearch.selected) return;
+    state.expertPicks = [...state.expertPicks, {
+      id: Date.now().toString(),
+      expert, note,
+      playerId: expertSearch.selected.id,
+      playerName: expertSearch.selected.web_name
+    }];
+    lsSet('fpl_expert_picks', state.expertPicks);
+    expertSearch = { query:'', selected: null };
+    render();
+  });
+}
+
+window.selectExpertPlayer = function(id, name) {
+  const p = state.players.find(p => p.id === id);
+  expertSearch.selected = p;
+  expertSearch.query = name;
+  document.getElementById('expert-player').value = `${name} ✓`;
+  document.getElementById('expert-results').innerHTML = '';
+};
+
+window.removePick = function(id) {
+  state.expertPicks = state.expertPicks.filter(e => e.id !== id);
+  lsSet('fpl_expert_picks', state.expertPicks);
+  render();
+};
+
+// ── DIFFERENTIALS ─────────────────────────────────────────────────────
+function renderDifferentials() {
+  const expertIds = new Set(state.expertPicks.map(e => Number(e.playerId)));
+  const diffs = state.players
+    .filter(p => p.minutes > 270 && parseFloat(p.selected_by_percent) < 8 && !expertIds.has(p.id))
+    .map(p => ({ ...p, score: parseFloat(p.form)*2 + parseFloat(p.ict_index)/10 + p.total_points/20 }))
+    .sort((a,b) => b.score - a.score).slice(0, 12);
+
+  const tip = state.expertPicks.length === 0
+    ? `<div class="tip-box">Tip: log some expert picks in the Experts tab — differentials are most meaningful once there's a consensus list to differ from.</div>`
+    : '';
+
+  return `
+    ${tip}
+    <div class="card">
+      <div class="card-title">Differential picks</div>
+      <div class="card-sub">Under 8% ownership · strong underlying numbers · not on any logged expert list</div>
+      ${diffs.length === 0
+        ? `<div class="empty">No qualifying differentials — try logging fewer expert picks or wait for the season to start.</div>`
+        : `<table>
+            <thead><tr><th>Player</th><th>Team</th><th>Own%</th><th>Form</th><th>ICT</th><th>Price</th></tr></thead>
+            <tbody>${diffs.map(p=>`
+              <tr>
+                <td>${posTag(POSMAP[p.element_type])} &nbsp;${p.web_name}</td>
+                <td class="text-muted">${state.teamById[p.team]?.short_name||''}</td>
+                <td class="mono">${p.selected_by_percent}%</td>
+                <td class="mono">${p.form}</td>
+                <td class="mono">${p.ict_index}</td>
+                <td class="mono">£${(p.now_cost/10).toFixed(1)}m</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>`}
+    </div>`;
+}
+
+// ── TRANSFERS ─────────────────────────────────────────────────────────
+function renderTransfers() {
+  const myPlayers = state.myTeamIds.map(id => state.players.find(p => p.id === id)).filter(Boolean);
+  const expertIds = new Set(state.expertPicks.map(e => Number(e.playerId)));
+
+  const analysis = myPlayers.map(p => {
+    const fd = fixtureDifficulty(p.team);
+    const form = parseFloat(p.form) || 0;
+    const flags = [];
+    if (form < 3) flags.push('Cold form');
+    if (fd && fd >= 3.8) flags.push('Tough fixture run');
+    if (p.chance_of_playing_next_round !== null && p.chance_of_playing_next_round < 75)
+      flags.push(`Injury doubt (${p.chance_of_playing_next_round}%)`);
+    if ((p.transfers_out_event||0) > (p.transfers_in_event||0) * 1.5)
+      flags.push('Heavily transferred out');
+    const verdict = flags.length === 0 ? 'hold' : flags.length === 1 ? 'monitor' : 'out';
+    const label = { hold:'HOLD', monitor:'MONITOR', out:'CONSIDER OUT' }[verdict];
+    return { ...p, fd, flags, verdict, label };
+  });
+
+  const myIds = new Set(state.myTeamIds);
+  const candidates = state.players
+    .filter(p => p.minutes > 270 && !myIds.has(p.id))
+    .map(p => {
+      const fd = fixtureDifficulty(p.team);
+      const expertBoost = expertIds.has(p.id) ? 1.5 : 0;
+      const fixtureBoost = fd ? (5 - fd) / 2 : 0;
+      return { ...p, fd, score: parseFloat(p.form) + fixtureBoost + expertBoost, isExpert: expertIds.has(p.id) };
+    })
+    .sort((a,b)=>b.score-a.score).slice(0, 8);
+
+  const squadRows = analysis.length === 0
+    ? `<div class="empty">No squad set yet — head to My Team to add your 15.</div>`
+    : analysis.map(p => `
+      <div class="transfer-row ${p.verdict}">
+        <div>
+          <div style="font-size:13px;font-weight:600">${posTag(POSMAP[p.element_type])} &nbsp;${p.web_name} <span class="text-muted" style="font-weight:400">(${state.teamById[p.team]?.short_name||''})</span></div>
+          ${p.flags.length ? `<div style="font-size:11px;color:var(--muted);margin-top:3px">${p.flags.join(' · ')}</div>` : ''}
+        </div>
+        <span class="verdict verdict-${p.verdict}">${p.label}</span>
+      </div>`).join('');
+
+  const candidateRows = candidates.map(p => `
+    <tr>
+      <td>${posTag(POSMAP[p.element_type])} &nbsp;${p.web_name}</td>
+      <td class="text-muted">${state.teamById[p.team]?.short_name||''}</td>
+      <td class="mono">${p.form}</td>
+      <td class="mono">${p.fd ? p.fd.toFixed(1) : '–'}</td>
+      <td>${p.isExpert ? '<span class="text-amber">✓</span>' : '<span class="text-muted">–</span>'}</td>
+      <td class="mono">£${(p.now_cost/10).toFixed(1)}m</td>
+    </tr>`).join('');
+
+  return `
+    <div class="card">
+      <div class="card-title">Your squad — transfer worthiness</div>
+      <div class="card-sub">${myPlayers.length === 0 ? 'Add your squad in My Team first' : 'Flags combine form, fixtures, injury status and transfer trends'}</div>
+      ${squadRows}
+    </div>
+    <div class="card">
+      <div class="card-title">Transfer-in candidates</div>
+      <div class="card-sub">Ranked by form, fixture ease, and expert backing</div>
+      <table>
+        <thead><tr><th>Player</th><th>Team</th><th>Form</th><th>Next 5 FDR</th><th>Expert</th><th>Price</th></tr></thead>
+        <tbody>${candidateRows}</tbody>
+      </table>
+    </div>`;
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    const bs = await fplFetch('bootstrap-static/');
+    if (!bs || !bs.elements) throw new Error('Invalid data from proxy');
+
+    state.players = bs.elements;
+    state.teams = bs.teams;
+    state.teamById = {};
+    bs.teams.forEach(t => state.teamById[t.id] = t);
+
+    const events = bs.events || [];
+    const anyFinished = events.some(e => e.finished);
+    document.getElementById('season-label').textContent =
+      `FPL ANALYTICS · ${anyFinished ? '2025/26 SEASON DATA' : 'PRE-SEASON'}`;
+
+    const fx = await fplFetch('fixtures/');
+    state.fixtures = fx || [];
+
+    state.myTeamIds = lsGet('fpl_my_team', []);
+    state.expertPicks = lsGet('fpl_expert_picks', []);
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+    render();
+  } catch(e) {
+    document.getElementById('loading').innerHTML = `
+      <div class="card error-card" style="text-align:left">
+        <div class="card-title">Couldn't load data</div>
+        <div class="error-msg" style="margin-top:8px">${e.message}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px">Try reloading the page.</div>
+        <button class="btn btn-primary" style="margin-top:12px" onclick="location.reload()">Retry</button>
+      </div>`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>
