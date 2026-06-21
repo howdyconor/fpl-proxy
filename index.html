@@ -108,6 +108,32 @@
   ::-webkit-scrollbar { height: 8px; width: 8px; }
   ::-webkit-scrollbar-thumb { background: #C9D6CC; border-radius: 4px; }
 
+  /* Fixture ticker */
+  .ticker-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .ticker-grid { border-collapse: collapse; min-width: 100%; }
+  .ticker-grid th { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); padding: 5px 6px; text-align: center; border-bottom: 1px solid var(--border); white-space: nowrap; position: sticky; top: 0; background: #fff; }
+  .ticker-grid th.team-col { text-align: left; position: sticky; left: 0; background: #fff; z-index: 2; min-width: 52px; }
+  .ticker-grid td { padding: 4px 4px; text-align: center; border-bottom: 1px solid #F5F3EC; font-size: 11px; font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
+  .ticker-grid td.team-col { text-align: left; font-weight: 700; font-size: 11px; position: sticky; left: 0; background: #fff; z-index: 1; padding-right: 8px; }
+  .fdr-1 { background: #1a7a45; color: #fff; border-radius: 3px; padding: 2px 4px; }
+  .fdr-2 { background: #5E8C6A; color: #fff; border-radius: 3px; padding: 2px 4px; }
+  .fdr-3 { background: #C9D6CC; color: #333; border-radius: 3px; padding: 2px 4px; }
+  .fdr-4 { background: #c47a2d; color: #fff; border-radius: 3px; padding: 2px 4px; }
+  .fdr-5 { background: #B5503D; color: #fff; border-radius: 3px; padding: 2px 4px; }
+  .my-team-row td { background: #FFFBF0 !important; }
+  .my-team-row td.team-col { background: #FFFBF0 !important; }
+  /* Chip planner */
+  .chip-card { border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+  .chip-name { font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 700; color: var(--green); }
+  .chip-verdict { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 10px; display: inline-block; margin: 6px 0 8px; }
+  .chip-now { background: #E8F5EC; color: var(--up); }
+  .chip-soon { background: #FBF6E9; color: #A8791E; }
+  .chip-wait { background: #F2EFE6; color: var(--muted); }
+  .chip-body { font-size: 13px; color: #3A4A3E; line-height: 1.5; }
+  .chip-gw-list { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .chip-gw-pill { font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 3px 8px; border-radius: 10px; background: var(--cream); border: 1px solid var(--border); }
+  .chip-gw-pill.best { background: var(--green); color: #fff; border-color: var(--green); }
+
   /* GW selector */
   .gw-selector { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
   .gw-selector label { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 0.04em; }
@@ -126,6 +152,8 @@
   <button data-tab="experts">Experts</button>
   <button data-tab="differentials">Differentials</button>
   <button data-tab="transfers">Transfers</button>
+  <button data-tab="ticker">Fixture Ticker</button>
+  <button data-tab="chips">Chip Planner</button>
 </div>
 <div id="main">
   <div id="loading" style="padding:40px;text-align:center;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:0.04em">PULLING LIVE DATA FROM FPL API…</div>
@@ -290,6 +318,8 @@ function render(){
     case 'experts': el.innerHTML=renderExperts(); bindExperts(); break;
     case 'differentials': el.innerHTML=renderDifferentials(); break;
     case 'transfers': el.innerHTML=renderTransfers(); bindTransfers(); break;
+    case 'ticker': el.innerHTML=renderTicker(); break;
+    case 'chips': el.innerHTML=renderChips(); break;
   }
 }
 
@@ -967,6 +997,273 @@ function buildTeamHistory(){
     history[f.team_a].push({event:f.event,scored:f.team_a_score,conceded:f.team_h_score,was_home:false});
   });
   state.teamHistory=history;
+}
+
+
+// ── FIXTURE TICKER ────────────────────────────────────────────────────
+function renderTicker(){
+  const myIds=new Set(state.myTeamIds);
+  const myTeamTeamIds=new Set(
+    state.myTeamIds.map(id=>state.players.find(p=>p.id===id)).filter(Boolean).map(p=>p.team)
+  );
+
+  // Get upcoming gameweeks (up to 10)
+  const allGWs=[...new Set(
+    state.fixtures.filter(f=>!f.finished&&f.event).map(f=>f.event)
+  )].sort((a,b)=>a-b).slice(0,10);
+
+  if(!allGWs.length) return `<div class="card"><div class="empty">No upcoming fixtures found — check back once the new season fixture list is published.</div></div>`;
+
+  // Build lookup: teamId -> { gw -> {opp, fdr, home} }
+  const teamFixtures={};
+  state.teams.forEach(t=>{ teamFixtures[t.id]={}; });
+  state.fixtures.filter(f=>!f.finished&&f.event&&allGWs.includes(f.event)).forEach(f=>{
+    const hdiff=customFDR_single(f.team_h,f.team_a,true);
+    const adiff=customFDR_single(f.team_a,f.team_h,false);
+    if(!teamFixtures[f.team_h]) teamFixtures[f.team_h]={};
+    if(!teamFixtures[f.team_a]) teamFixtures[f.team_a]={};
+    // A team can have a blank or double GW — store as array
+    if(!teamFixtures[f.team_h][f.event]) teamFixtures[f.team_h][f.event]=[];
+    if(!teamFixtures[f.team_a][f.event]) teamFixtures[f.team_a][f.event]=[];
+    teamFixtures[f.team_h][f.event].push({opp:state.teamById[f.team_a]?.short_name||'?',fdr:hdiff,home:true});
+    teamFixtures[f.team_a][f.event].push({opp:state.teamById[f.team_h]?.short_name||'?',fdr:adiff,home:false});
+  });
+
+  // Sort teams: my team players' clubs first, then by avg upcoming FDR
+  const sortedTeams=[...state.teams].sort((a,b)=>{
+    const aMe=myTeamTeamIds.has(a.id)?0:1;
+    const bMe=myTeamTeamIds.has(b.id)?0:1;
+    if(aMe!==bMe) return aMe-bMe;
+    const avgA=allGWs.map(gw=>(teamFixtures[a.id][gw]||[{fdr:3}])[0].fdr).reduce((s,v)=>s+v,0)/allGWs.length;
+    const avgB=allGWs.map(gw=>(teamFixtures[b.id][gw]||[{fdr:3}])[0].fdr).reduce((s,v)=>s+v,0)/allGWs.length;
+    return avgA-avgB;
+  });
+
+  function fdrClass(fdr){
+    if(fdr<=1.8) return 'fdr-1';
+    if(fdr<=2.5) return 'fdr-2';
+    if(fdr<=3.3) return 'fdr-3';
+    if(fdr<=4.0) return 'fdr-4';
+    return 'fdr-5';
+  }
+
+  const gwHeaders=allGWs.map(gw=>`<th>GW${gw}</th>`).join('');
+  const rows=sortedTeams.map(t=>{
+    const isMyTeam=myTeamTeamIds.has(t.id);
+    const cells=allGWs.map(gw=>{
+      const fixtures=teamFixtures[t.id][gw]||[];
+      if(!fixtures.length) return `<td><span style="color:var(--muted)">–</span></td>`;
+      const inner=fixtures.map(f=>{
+        const label=f.opp+(f.home?'(H)':'(A)');
+        return `<span class="${fdrClass(f.fdr)}">${label}</span>`;
+      }).join(' ');
+      return `<td>${inner}</td>`;
+    }).join('');
+    return `<tr class="${isMyTeam?'my-team-row':''}">
+      <td class="team-col">${isMyTeam?'★ ':''}${t.short_name}</td>
+      ${cells}
+    </tr>`;
+  }).join('');
+
+  return `
+    <div class="card">
+      <div class="card-title">Fixture Ticker — next ${allGWs.length} gameweeks</div>
+      <div class="card-sub">Custom FDR · ★ = your squad's clubs appear first · scroll right for more GWs · (H) home (A) away</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;font-size:11px">
+        <span><span class="fdr-1" style="padding:1px 6px">1.x</span> Very easy</span>
+        <span><span class="fdr-2" style="padding:1px 6px">2.x</span> Easy</span>
+        <span><span class="fdr-3" style="padding:1px 6px">3.x</span> Medium</span>
+        <span><span class="fdr-4" style="padding:1px 6px">4.x</span> Hard</span>
+        <span><span class="fdr-5" style="padding:1px 6px">5.x</span> Very hard</span>
+      </div>
+    </div>
+    <div class="card" style="padding:0">
+      <div class="ticker-wrap">
+        <table class="ticker-grid">
+          <thead><tr><th class="team-col">Team</th>${gwHeaders}</tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// Single fixture FDR (used by ticker, not needing lookahead average)
+function customFDR_single(teamId, oppId, isHome){
+  const hist=state.teamHistory[oppId]||[];
+  if(!hist.length) return 3;
+  const last10=hist.slice(-10);
+  const oppScored=last10.reduce((s,g)=>s+g.scored,0)/last10.length;
+  const oppConceded=last10.reduce((s,g)=>s+g.conceded,0)/last10.length;
+  const homeAdj=isHome?-0.2:0.2;
+  return Math.min(5,Math.max(1, oppScored*1.2 - oppConceded*0.8 + 3 + homeAdj));
+}
+
+// ── CHIP PLANNER ──────────────────────────────────────────────────────
+function renderChips(){
+  const myPlayers=state.myTeamIds.map(id=>state.players.find(p=>p.id===id)).filter(Boolean);
+  const benchIds=new Set(state.benchIds);
+  const benchPlayers=myPlayers.filter(p=>benchIds.has(p.id));
+  const xiPlayers=myPlayers.filter(p=>!benchIds.has(p.id));
+  const captainId=state.captainId;
+
+  // Get upcoming GWs
+  const upcomingGWs=[...new Set(
+    state.fixtures.filter(f=>!f.finished&&f.event).map(f=>f.event)
+  )].sort((a,b)=>a-b).slice(0,16);
+
+  if(!upcomingGWs.length){
+    return `<div class="card"><div class="empty">No upcoming fixtures yet — chip planner will populate once the new season fixture list is published.</div></div>`;
+  }
+
+  // Score each GW for each chip type
+  // For a GW, compute avg FDR of my XI players
+  function gwXIScore(gw){
+    if(!xiPlayers.length) return 3;
+    const fdrs=xiPlayers.map(p=>customFDR_single_gw(p.team,gw));
+    return fdrs.reduce((a,b)=>a+b,0)/fdrs.length;
+  }
+  function gwBenchScore(gw){
+    if(!benchPlayers.length) return 3;
+    const fdrs=benchPlayers.map(p=>customFDR_single_gw(p.team,gw));
+    return fdrs.reduce((a,b)=>a+b,0)/fdrs.length;
+  }
+  function gwCaptainScore(gw){
+    const cap=captainId?myPlayers.find(p=>p.id===captainId):null;
+    if(!cap) return 3;
+    return customFDR_single_gw(cap.team,gw);
+  }
+  // Double GW bonus — teams with 2 fixtures
+  function gwDoubleCount(gw){
+    const seen={};
+    state.fixtures.filter(f=>!f.finished&&f.event===gw).forEach(f=>{
+      seen[f.team_h]=(seen[f.team_h]||0)+1;
+      seen[f.team_a]=(seen[f.team_a]||0)+1;
+    });
+    return Object.values(seen).filter(v=>v>0).length;
+  }
+
+  // Get best GWs for each chip
+  const gwXIScores=upcomingGWs.map(gw=>({gw,score:gwXIScore(gw),bench:gwBenchScore(gw),cap:gwCaptainScore(gw)}));
+  const sortedByXI=[...gwXIScores].sort((a,b)=>a.score-b.score);   // lower FDR = easier = better
+  const sortedByBench=[...gwXIScores].sort((a,b)=>a.bench-b.bench);
+  const sortedByCap=[...gwXIScores].sort((a,b)=>a.cap-b.cap);
+
+  const bestWCGW=sortedByXI[0];
+  const bestBBGW=sortedByBench[0];
+  const bestTCGW=sortedByCap[0];
+
+  // Wildcard: best when squad has hard run coming (high avg FDR for your XI)
+  const currentXIFDR=gwXIScores[0]?.score||3;
+  const wcVerdict=currentXIFDR>=3.5?'now':bestWCGW.score<=2.3?'wait':'soon';
+  const wcLabel={now:'USE SOON',soon:'MONITOR',wait:'HOLD'}[wcVerdict];
+  const wcClass={now:'chip-now',soon:'chip-soon',wait:'chip-wait'}[wcVerdict];
+
+  // Bench Boost: best when bench has easy fixtures AND ideally a DGW for bench players
+  const bbVerdict=bestBBGW.bench<=2.2?'now':bestBBGW.bench<=2.8?'soon':'wait';
+  const bbLabel={now:'GOOD WINDOW',soon:'UPCOMING',wait:'WAIT'}[bbVerdict];
+  const bbClass={now:'chip-now',soon:'chip-soon',wait:'chip-wait'}[bbVerdict];
+
+  // Triple Captain: best when captain has very easy fixture
+  const tcVerdict=bestTCGW.cap<=2.0?'now':bestTCGW.cap<=2.5?'soon':'wait';
+  const tcLabel={now:'GOOD WINDOW',soon:'UPCOMING',wait:'WAIT'}[tcVerdict];
+  const tcClass={now:'chip-now',soon:'chip-soon',wait:'chip-wait'}[tcVerdict];
+
+  const noSquad=myPlayers.length===0;
+  const noSquadNote=noSquad?`<div class="tip-box">Add your squad in My Team for personalised chip recommendations.</div>`:'';
+
+  // Top 3 GW windows for each chip
+  function gwPills(sorted,key,n=4){
+    return sorted.slice(0,n).map((g,i)=>`<span class="chip-gw-pill${i===0?' best':''}">GW${g.gw} <span style="opacity:0.7">${g[key].toFixed(1)}</span></span>`).join('');
+  }
+
+  // Wildcard squad analysis
+  const flaggedPlayers=myPlayers.filter(p=>{
+    const fdr=customFDR(p.team)||3;
+    return parseFloat(p.form)<3||fdr>=3.8;
+  });
+
+  return `
+    ${noSquadNote}
+    <div class="card">
+      <div class="card-title">Chip Planner</div>
+      <div class="card-sub">Recommendations based on your squad's upcoming fixture difficulty${noSquad?' (add squad for personalised advice)':''}</div>
+    </div>
+
+    <div class="chip-card">
+      <div class="chip-name">🃏 Wildcard</div>
+      <div class="chip-verdict ${wcClass}">${wcLabel}</div>
+      <div class="chip-body">
+        ${noSquad
+          ? 'Add your squad to see when a Wildcard makes sense based on your fixture run.'
+          : wcVerdict==='now'
+            ? `Your XI has a tough upcoming run (avg FDR ${currentXIFDR.toFixed(1)}). If you also have ${flaggedPlayers.length>1?flaggedPlayers.length+' players in poor form or with bad fixtures':'concerns about squad quality'}, now is a good time to consider it.`
+            : wcVerdict==='soon'
+              ? `No urgent need right now — your fixture run is manageable. Best window based on squad fixture ease is GW${bestWCGW.gw}.`
+              : `Your squad has a decent upcoming run. Hold the wildcard — there's no strong trigger to use it yet.`
+        }
+        ${flaggedPlayers.length?`<div style="margin-top:8px;font-size:12px;color:var(--muted)">Flagged: ${flaggedPlayers.map(p=>p.web_name).join(', ')}</div>`:''}
+      </div>
+      <div class="chip-gw-list">
+        <span style="font-size:11px;color:var(--muted);align-self:center">Best windows:</span>
+        ${gwPills(sortedByXI,'score')}
+      </div>
+    </div>
+
+    <div class="chip-card">
+      <div class="chip-name">⬆ Bench Boost</div>
+      <div class="chip-verdict ${bbClass}">${bbLabel}</div>
+      <div class="chip-body">
+        ${noSquad
+          ? 'Add your squad and set your bench in My Team for a personalised Bench Boost recommendation.'
+          : benchPlayers.length===0
+            ? 'Set your bench in My Team (use the ⇅ button on player cards) to get a Bench Boost recommendation.'
+            : `Best used when your bench players have easy fixtures. GW${bestBBGW.gw} looks like the strongest window for your bench (avg FDR ${bestBBGW.bench.toFixed(1)}). Ideal if there's also a double gameweek for your bench players.`
+        }
+      </div>
+      <div class="chip-gw-list">
+        <span style="font-size:11px;color:var(--muted);align-self:center">Best windows:</span>
+        ${gwPills(sortedByBench,'bench')}
+      </div>
+    </div>
+
+    <div class="chip-card">
+      <div class="chip-name">3️⃣ Triple Captain</div>
+      <div class="chip-verdict ${tcClass}">${tcLabel}</div>
+      <div class="chip-body">
+        ${noSquad
+          ? 'Add your squad and set a captain in My Team for a personalised Triple Captain recommendation.'
+          : !captainId
+            ? 'Set a captain in My Team (tap C on a player card) to get a Triple Captain recommendation.'
+            : `Best used when your captain has a very easy home fixture against a weak defence. GW${bestTCGW.gw} is the strongest window for ${myPlayers.find(p=>p.id===captainId)?.web_name||'your captain'} (FDR ${bestTCGW.cap.toFixed(1)}). Combine with a premium player's best fixture for maximum points.`
+        }
+      </div>
+      <div class="chip-gw-list">
+        <span style="font-size:11px;color:var(--muted);align-self:center">Best windows:</span>
+        ${gwPills(sortedByCap,'cap')}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Free Hit &amp; notes</div>
+      <div class="card-sub">General guidance</div>
+      <div style="font-size:13px;color:#3A4A3E;line-height:1.6">
+        <b>Free Hit</b> is best saved for a blank gameweek (where your regular players have no fixture) — use it to field a full team of players who ARE playing. This can't be modelled without knowing which GWs will be blanked, but watch for fixture congestion in Feb–April.<br><br>
+        <b>General chip rules:</b> never use two chips in the same gameweek. Wildcard resets in January so you get a second one. Bench Boost and Triple Captain are once-per-season — save them for the highest-upside moment, not just a decent window.
+      </div>
+    </div>`;
+}
+
+// FDR for a specific GW (single fixture lookup)
+function customFDR_single_gw(teamId, gw){
+  const fix=state.fixtures.filter(f=>!f.finished&&f.event===gw&&(f.team_h===teamId||f.team_a===teamId));
+  if(!fix.length) return 3.5; // blank GW — treat as hard
+  const fdrs=fix.map(f=>{
+    const isHome=f.team_h===teamId;
+    const oppId=isHome?f.team_a:f.team_h;
+    return customFDR_single(teamId,oppId,isHome);
+  });
+  // Double GW = average of both fixtures, slightly easier overall
+  return fdrs.reduce((a,b)=>a+b,0)/fdrs.length * (fdrs.length>1?0.9:1);
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────
