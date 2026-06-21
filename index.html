@@ -314,10 +314,21 @@ function renderTeam(){
 
   function playerCard(p,isBench=false){
     const isCap=p.id===state.captainId;
-    return `<div class="player-card${isCap?' captain':''}" onclick="cyclePlayerAction(${p.id})" title="Tap to set captain / remove">
-      <span class="pc-pos">${isCap?'(C) ':''}${POSMAP[p.element_type]}</span>
-      <span class="pc-name">${p.web_name}</span>
+    const isVC=p.id===state.viceCaptainId;
+    const inBench=state.benchIds.includes(p.id)||(effectiveBench&&effectiveBench.has(p.id)&&!state.benchIds.length);
+    const capStyle=isCap?'background:#E8A33D;color:#fff':'background:rgba(255,255,255,0.5);color:#555';
+    const vcStyle=isVC?'background:#7FAEDB;color:#fff':'background:rgba(255,255,255,0.5);color:#555';
+    const benchStyle=inBench?'background:var(--green);color:#fff':'background:rgba(255,255,255,0.5);color:#555';
+    return `<div class="player-card${isCap?' captain':isVC?' vc':''}">
+      <span class="pc-pos">${POSMAP[p.element_type]}</span>
+      <span class="pc-name">${isCap?'<b style="color:var(--amber)">(C)</b> ':isVC?'<b style="color:#7FAEDB">(V)</b> ':''}${p.web_name}</span>
       <span class="pc-pts">${p.total_points}pts · £${(p.now_cost/10).toFixed(1)}m</span>
+      <div class="pc-actions">
+        <button onclick="event.stopPropagation();setRole(${p.id},'captain')" style="${capStyle};border:none;border-radius:3px;font-size:10px;font-weight:700;padding:2px 5px;cursor:pointer">C</button>
+        <button onclick="event.stopPropagation();setRole(${p.id},'vc')" style="${vcStyle};border:none;border-radius:3px;font-size:10px;font-weight:700;padding:2px 5px;cursor:pointer">VC</button>
+        <button onclick="event.stopPropagation();setRole(${p.id},'bench')" style="${benchStyle};border:none;border-radius:3px;font-size:10px;padding:2px 5px;cursor:pointer" title="${inBench?'Move to XI':'Move to bench'}">&#8645;</button>
+        <button onclick="event.stopPropagation();setRole(${p.id},'remove')" style="background:rgba(255,255,255,0.5);color:var(--down);border:none;border-radius:3px;font-size:10px;padding:2px 5px;cursor:pointer">✕</button>
+      </div>
     </div>`;
   }
 
@@ -655,25 +666,22 @@ function bindExperts(){
         });
         const expertName=document.getElementById('expert-name').value.trim()||'Scanned expert';
         const gwVal=document.getElementById('expert-gw').value.trim();
-        const resp=await fetch('https://api.anthropic.com/v1/messages',{
+        // Route via Vercel serverless to avoid browser CORS on Anthropic API
+        const resp=await fetch('/api/scan',{
           method:'POST',
-          headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+          headers:{'Content-Type':'application/json'},
           body:JSON.stringify({
-            model:'claude-sonnet-4-6',
-            max_tokens:1000,
-            messages:[{
-              role:'user',
-              content:[
-                {type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:b64}},
-                {type:'text',text:`This is a screenshot of an FPL (Fantasy Premier League) team. List every player name you can see in the team. Return ONLY a JSON array of strings with the player surnames or web names as they appear in FPL. Example: ["Salah","Haaland","Trent"]. No other text.`}
-              ]
-            }]
+            imageData:b64,
+            mediaType:file.type||'image/jpeg'
           })
         });
+        if(!resp.ok){
+          const err=await resp.text();
+          throw new Error(`Scan API error ${resp.status}: ${err}`);
+        }
         const data=await resp.json();
-        const text=data.content?.filter(b=>b.type==='text').map(b=>b.text).join('')||'';
-        const clean=text.replace(/```json|```/g,'').trim();
-        const names=JSON.parse(clean);
+        if(data.error) throw new Error(data.error);
+        const names=data.players||[];
         // Match to players
         let matched=0;
         names.forEach(name=>{
