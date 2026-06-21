@@ -427,10 +427,30 @@ function renderStats(){
   const filtered=state.players.filter(p=>POSMAP[p.element_type]===pos&&p.minutes>270);
   const corrs=getCorrelations(pos);
 
-  // Top players by composite weighted score
-  const scored=filtered
-    .map(p=>({...p,comp:compositeScore(p),ppm:p.total_points/(p.now_cost/10)}))
-    .sort((a,b)=>b.comp-a.comp).slice(0,12);
+  // Score every player, then compute over/underperformance
+  const allScored=filtered.map(p=>{
+    const comp=compositeScore(p);
+    const ppm=p.total_points/(p.now_cost/10);
+    // Predict points from comp score relative to position average
+    const avgComp=filtered.reduce((s,q)=>s+compositeScore(q),0)/filtered.length||1;
+    const avgPts=filtered.reduce((s,q)=>s+q.total_points,0)/filtered.length||1;
+    const predictedPts=(comp/avgComp)*avgPts;
+    const delta=p.total_points-predictedPts; // +ve = overperforming, -ve = underperforming
+    const deltaRatio=delta/Math.max(avgPts,1);
+    return{...p,comp,ppm,predictedPts,delta,deltaRatio};
+  });
+
+  const topByStats=[...allScored].sort((a,b)=>b.comp-a.comp).slice(0,12);
+
+  // Overperformers: points well above what stats predict (regression risk)
+  const overperformers=[...allScored]
+    .filter(p=>p.deltaRatio>0.2)
+    .sort((a,b)=>b.deltaRatio-a.deltaRatio).slice(0,6);
+
+  // Underperformers: stats say they should score more (breakout candidates)
+  const underperformers=[...allScored]
+    .filter(p=>p.deltaRatio<-0.2&&p.comp>0.3)
+    .sort((a,b)=>a.deltaRatio-b.deltaRatio).slice(0,6);
 
   const filterBtns=['GKP','DEF','MID','FWD'].map(p=>
     `<button class="pos-filter ${p===pos?'active':''}" data-pos="${p}">${p}</button>`).join('');
@@ -442,16 +462,36 @@ function renderStats(){
       <span class="bar-val">${c.r.toFixed(2)}</span>
     </div>`).join('');
 
-  const topRows=scored.map((p,i)=>`
+  const topRows=topByStats.map((p,i)=>`
     <tr>
       <td style="color:var(--muted);font-size:11px;font-family:'JetBrains Mono',monospace">${i+1}</td>
       <td>${p.web_name}</td>
       <td class="text-muted" style="font-size:12px">${state.teamById[p.team]?.short_name||''}</td>
       <td class="mono" style="font-size:12px">£${(p.now_cost/10).toFixed(1)}m</td>
-      <td>
-        <div class="score-bar" style="width:80px"><div class="score-fill" style="width:${p.comp*100}%"></div></div>
-      </td>
+      <td><div class="score-bar" style="width:70px"><div class="score-fill" style="width:${p.comp*100}%"></div></div></td>
       <td class="mono" style="font-size:12px">${p.total_points}pts</td>
+    </tr>`).join('');
+
+  const overRows=overperformers.length===0
+    ?`<div class="empty">No clear overperformers detected.</div>`
+    :overperformers.map(p=>`
+    <tr>
+      <td>${posTag(POSMAP[p.element_type])} &nbsp;${p.web_name}</td>
+      <td class="text-muted" style="font-size:12px">${state.teamById[p.team]?.short_name||''}</td>
+      <td class="mono" style="font-size:12px">${p.total_points}pts</td>
+      <td class="mono" style="font-size:12px;color:var(--muted)">${Math.round(p.predictedPts)}pts expected</td>
+      <td style="font-size:12px;color:var(--down);font-weight:600">+${Math.round(p.delta)} ⚠</td>
+    </tr>`).join('');
+
+  const underRows=underperformers.length===0
+    ?`<div class="empty">No clear breakout candidates detected.</div>`
+    :underperformers.map(p=>`
+    <tr>
+      <td>${posTag(POSMAP[p.element_type])} &nbsp;${p.web_name}</td>
+      <td class="text-muted" style="font-size:12px">${state.teamById[p.team]?.short_name||''}</td>
+      <td class="mono" style="font-size:12px">${p.total_points}pts</td>
+      <td class="mono" style="font-size:12px;color:var(--muted)">${Math.round(p.predictedPts)}pts expected</td>
+      <td style="font-size:12px;color:var(--up);font-weight:600">${Math.round(p.delta)} ✦</td>
     </tr>`).join('');
 
   return `
@@ -462,12 +502,30 @@ function renderStats(){
       ${filtered.length<5?`<div class="empty">Not enough data for this position yet.</div>`:bars}
     </div>
     <div class="card">
-      <div class="card-title">Top ${pos} targets — composite score</div>
-      <div class="card-sub">Weighted by the stats that actually correlate to points at this position</div>
+      <div class="card-title">Top ${pos} targets — stat composite</div>
+      <div class="card-sub">Weighted by stats that actually correlate to points at this position</div>
       <table>
-        <thead><tr><th>#</th><th>Player</th><th>Team</th><th>Price</th><th>Stat score</th><th>Total pts</th></tr></thead>
+        <thead><tr><th>#</th><th>Player</th><th>Team</th><th>Price</th><th>Stat score</th><th>Pts</th></tr></thead>
         <tbody>${topRows}</tbody>
       </table>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Regression risks ⚠</div>
+        <div class="card-sub">Points well above what stats predict — form may not last</div>
+        <table>
+          <thead><tr><th>Player</th><th>Team</th><th>Actual</th><th>Expected</th><th>Gap</th></tr></thead>
+          <tbody>${overRows}</tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">Breakout candidates ✦</div>
+        <div class="card-sub">Stats suggest more points than they've scored — potentially due a run</div>
+        <table>
+          <thead><tr><th>Player</th><th>Team</th><th>Actual</th><th>Expected</th><th>Gap</th></tr></thead>
+          <tbody>${underRows}</tbody>
+        </table>
+      </div>
     </div>`;
 }
 
