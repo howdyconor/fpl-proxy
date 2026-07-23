@@ -47,6 +47,7 @@ export default async function handler(req, res) {
       const slim = data.map(f => ({
         id: f.id, team_h: f.team_h, team_a: f.team_a,
         team_h_difficulty: f.team_h_difficulty, team_a_difficulty: f.team_a_difficulty,
+        team_h_score: f.team_h_score, team_a_score: f.team_a_score,
         finished: f.finished, event: f.event,
       }));
       res.setHeader("Access-Control-Allow-Origin", "*");
