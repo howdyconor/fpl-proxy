@@ -363,8 +363,16 @@ function autoBenchIds(myPlayers){
   return myPlayers.filter(p=>!xiIds.has(p.id)).map(p=>p.id);
 }
 function effectiveBenchIds(myPlayers){
-  const saved=state.benchIds.filter(id=>state.myTeamIds.includes(id));
-  return saved.length?saved:autoBenchIds(myPlayers);
+  const expectedBenchSize=Math.max(0,myPlayers.length-11);
+  const saved=[...new Set(state.benchIds.filter(id=>state.myTeamIds.includes(id)))];
+  if(saved.length===expectedBenchSize) return saved;
+  // Saved bench doesn't add up to exactly 11 in the XI (e.g. stale data
+  // from before substitutions were validated) — self-heal to a fresh
+  // auto bench and persist the correction.
+  const fixed=autoBenchIds(myPlayers);
+  state.benchIds=fixed;
+  lsSet('fpl_bench',fixed);
+  return fixed;
 }
 
 // Valid FPL formation shape for the outfield XI (GK is always exactly 1)
