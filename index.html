@@ -172,6 +172,7 @@ let state = {
   expertPicks:[], activeTab:'team',
   statsPos:'MID', valuePos:'ALL', expertsGW:'all',
   projPos:'ALL', projTeam:'ALL', projSearch:'',
+  currentGW:null,
   teamHistory:{}
 };
 
@@ -646,8 +647,26 @@ function bindValue(){
 let expertSearch={query:'',selected:null};
 
 function getGWOptions(){
-  const gws=[...new Set(state.expertPicks.map(e=>e.gw).filter(Boolean))].sort((a,b)=>a-b);
-  return gws;
+  const gws=new Set(state.expertPicks.map(e=>e.gw).filter(Boolean));
+  if(state.currentGW) gws.add(state.currentGW);
+  return [...gws].sort((a,b)=>a-b);
+}
+
+// Build a suggested XI from the most-picked players per position (4-4-2 shape,
+// matching the auto-bench formation used elsewhere in the app)
+function buildConsensusXI(consensus){
+  const groups={GKP:[],DEF:[],MID:[],FWD:[]};
+  Object.entries(consensus).forEach(([id,c])=>{
+    const player=state.players.find(p=>p.id===Number(id));
+    if(!player) return;
+    groups[POSMAP[player.element_type]].push({...c,player});
+  });
+  Object.values(groups).forEach(list=>list.sort((a,b)=>b.count-a.count));
+  const slotCounts={GKP:1,DEF:4,MID:4,FWD:2};
+  return Object.fromEntries(Object.entries(slotCounts).map(([pos,need])=>{
+    const have=groups[pos].slice(0,need);
+    return [pos,[...have,...Array(Math.max(0,need-have.length)).fill(null)]];
+  }));
 }
 
 function renderExperts(){
@@ -663,6 +682,20 @@ function renderExperts(){
     consensus[e.playerId].experts.push(e.expert);
   });
   const sorted=Object.entries(consensus).sort((a,b)=>b[1].count-a[1].count);
+  const xi=buildConsensusXI(consensus);
+
+  function xiCard(c){
+    if(!c) return `<div class="player-card" style="opacity:0.45">
+      <span class="pc-pos">–</span>
+      <span class="pc-name">No picks yet</span>
+      <span class="pc-pts">–</span>
+    </div>`;
+    return `<div class="player-card">
+      <span class="pc-pos">${POSMAP[c.player.element_type]}</span>
+      <span class="pc-name">${c.player.web_name}</span>
+      <span class="pc-pts">${c.count} pick${c.count===1?'':'s'} · ${state.teamById[c.player.team]?.short_name||''}</span>
+    </div>`;
+  }
 
   const gwSelector=gws.length?`
     <div class="gw-selector">
@@ -680,7 +713,7 @@ function renderExperts(){
       <input class="input" id="expert-name" placeholder="Expert / source (e.g. FPL Mate, Let's Talk FPL)">
       <input class="input" id="expert-player" placeholder="Player they picked…" autocomplete="off">
       <div id="expert-results"></div>
-      <input class="input" id="expert-gw" placeholder="Gameweek number (e.g. 1)" type="number" min="1" max="38">
+      <input class="input" id="expert-gw" placeholder="Gameweek number (e.g. 1)" type="number" min="1" max="38" value="${state.currentGW||''}">
       <input class="input" id="expert-note" placeholder="Note (optional) — e.g. captain pick, wildcard target">
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-primary" id="add-pick-btn">Add pick</button>
@@ -703,6 +736,14 @@ function renderExperts(){
             <span class="consensus-badge">${c.count}</span>
           </div>`).join('')}
     </div>
+    ${sorted.length>0?`
+    <div class="pitch">
+      <div class="pitch-row">${xi.GKP.map(xiCard).join('')}</div>
+      <div class="pitch-row">${xi.DEF.map(xiCard).join('')}</div>
+      <div class="pitch-row">${xi.MID.map(xiCard).join('')}</div>
+      <div class="pitch-row">${xi.FWD.map(xiCard).join('')}</div>
+    </div>
+    <div class="card-sub" style="margin-top:-8px;margin-bottom:14px">Consensus XI — most-picked player per slot from the sources logged above${filterGW!=='all'?` for GW ${filterGW}`:''}. Not a prediction, just an aggregate of what's been logged.</div>`:''}
     <div class="card">
       <div class="card-title">All logged picks</div>
       ${picks.length===0?`<div class="empty">Nothing logged yet.</div>`:
@@ -765,7 +806,8 @@ function bindExperts(){
           r.onerror=rej;
           r.readAsDataURL(file);
         });
-        const expertName=document.getElementById('expert-name').value.trim()||'Scanned expert';
+        const expertName=document.getElementById('expert-name').value.trim()||
+          `Scanned (${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short'})})`;
         const gwVal=document.getElementById('expert-gw').value.trim();
         // Route via Vercel serverless to avoid browser CORS on Anthropic API
         const resp=await fetch('/api/scan',{
@@ -1397,6 +1439,9 @@ async function init(){
     const anyFinished=events.some(e=>e.finished);
     document.getElementById('season-label').textContent=
       `FPL ANALYTICS · ${anyFinished?'2025/26 SEASON DATA':'PRE-SEASON'}`;
+    const currentEvent=events.find(e=>e.is_current)||events.find(e=>e.is_next)||events[0];
+    state.currentGW=currentEvent?currentEvent.id:null;
+    if(state.currentGW) state.expertsGW=state.currentGW;
 
     const fx=await fplFetch('fixtures/');
     state.fixtures=fx||[];
