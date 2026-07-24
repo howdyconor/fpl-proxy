@@ -79,6 +79,8 @@
   .pc-actions { display: flex; gap: 2px; margin-top: 4px; justify-content: center; }
   .player-card.captain { border-color: var(--amber); background: #FFFBF0; }
   .player-card.vc { border-color: #7FAEDB; background: #F0F7FF; }
+  .player-card.selected { border-color: var(--amber); box-shadow: 0 0 0 2px rgba(232,163,61,0.35); }
+  .player-card.can-target { border-color: #7FAEDB; box-shadow: 0 0 0 2px rgba(127,174,219,0.35); }
   .bench-strip { display: flex; gap: 6px; justify-content: center; padding: 10px 8px 4px; border-top: 2px dashed rgba(255,255,255,0.2); margin-top: 8px; }
   .bench-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: rgba(255,255,255,0.5); text-align: center; margin-bottom: 4px; letter-spacing: 0.04em; }
 
@@ -216,7 +218,12 @@ function customFDR(teamId, lookahead=5){
     const isHome = f.team_h===teamId;
     const oppId = isHome ? f.team_a : f.team_h;
     const hist = state.teamHistory[oppId] || [];
-    if(!hist.length) return 3; // fallback to mid difficulty
+    if(!hist.length){
+      // No current-season history yet (pre-season / promoted side) — fall
+      // back to FPL's own official difficulty rating for this fixture.
+      const officialFdr=isHome?f.team_h_difficulty:f.team_a_difficulty;
+      return officialFdr!=null?Math.min(5,Math.max(1,officialFdr)):3;
+    }
     const last10 = hist.slice(-10);
     // Opponent's avg goals scored (= our defensive challenge)
     const oppScored = last10.reduce((s,g)=>s+g.scored,0)/last10.length;
@@ -343,63 +350,97 @@ function render(){
 }
 
 // ── MY TEAM — pitch formation layout ──────────────────────────────────
-function renderTeam(){
-  const myPlayers=state.myTeamIds.map(id=>state.players.find(p=>p.id===id)).filter(Boolean);
+// Bench: explicit state.benchIds if the user has made a selection,
+// otherwise a sensible default (last-added player beyond standard
+// starting slots per position, roughly a 4-4-2 shape).
+function autoBenchIds(myPlayers){
   const sorted=[...myPlayers].sort((a,b)=>a.element_type-b.element_type);
-
   const gkps=sorted.filter(p=>p.element_type===1);
   const defs=sorted.filter(p=>p.element_type===2);
   const mids=sorted.filter(p=>p.element_type===3);
   const fwds=sorted.filter(p=>p.element_type===4);
+  const xiIds=new Set([...gkps.slice(0,1),...defs.slice(0,4),...mids.slice(0,4),...fwds.slice(0,2)].slice(0,11).map(p=>p.id));
+  return myPlayers.filter(p=>!xiIds.has(p.id)).map(p=>p.id);
+}
+function effectiveBenchIds(myPlayers){
+  const saved=state.benchIds.filter(id=>state.myTeamIds.includes(id));
+  return saved.length?saved:autoBenchIds(myPlayers);
+}
 
-  // Split XI vs bench using persisted benchIds, fallback to automatic
-  const autoBench=new Set();
-  const autoXi=[...gkps.slice(0,1),...defs.slice(0,4),...mids.slice(0,4),...fwds.slice(0,2)].slice(0,11);
-  myPlayers.forEach(p=>{ if(!autoXi.includes(p)) autoBench.add(p.id); });
-  const userBenchIds=new Set(state.benchIds.filter(id=>state.myTeamIds.includes(id)));
-  const effectiveBench=userBenchIds.size>0?userBenchIds:autoBench;
-  const bench=myPlayers.filter(p=>effectiveBench.has(p.id));
-  const benchSet=effectiveBench;
+// Valid FPL formation shape for the outfield XI (GK is always exactly 1)
+const FORMATION_LIMITS={DEF:[3,5],MID:[2,5],FWD:[1,3]};
 
-  function playerCard(p,isBench=false){
+// Can these two players (one bench, one XI) swap places without breaking
+// the formation? GK can only swap with the other GK; outfield swaps must
+// keep DEF/MID/FWD counts within the legal FPL range.
+function canSwapPlayers(idA,idB,myPlayers,benchSet){
+  if(idA===idB) return false;
+  const a=myPlayers.find(p=>p.id===idA), b=myPlayers.find(p=>p.id===idB);
+  if(!a||!b) return false;
+  const aBench=benchSet.has(a.id), bBench=benchSet.has(b.id);
+  if(aBench===bBench) return false; // must be one bench + one XI
+  const posA=POSMAP[a.element_type], posB=POSMAP[b.element_type];
+  if(posA==='GKP'||posB==='GKP') return posA===posB;
+  const counts={DEF:0,MID:0,FWD:0};
+  myPlayers.forEach(p=>{
+    if(!benchSet.has(p.id)&&counts[POSMAP[p.element_type]]!==undefined) counts[POSMAP[p.element_type]]++;
+  });
+  const leavingXI=aBench?b:a, enteringXI=aBench?a:b;
+  counts[POSMAP[leavingXI.element_type]]--;
+  counts[POSMAP[enteringXI.element_type]]++;
+  return Object.entries(FORMATION_LIMITS).every(([pos,[min,max]])=>counts[pos]>=min&&counts[pos]<=max);
+}
+
+let subSelection=null; // player id currently selected for substitution
+
+function renderTeam(){
+  const myPlayers=state.myTeamIds.map(id=>state.players.find(p=>p.id===id)).filter(Boolean);
+  const benchSet=new Set(effectiveBenchIds(myPlayers));
+  const xi=myPlayers.filter(p=>!benchSet.has(p.id));
+  const bench=myPlayers.filter(p=>benchSet.has(p.id));
+
+  function playerCard(p){
     const isCap=p.id===state.captainId;
     const isVC=p.id===state.viceCaptainId;
-    const inBench=state.benchIds.includes(p.id)||(effectiveBench&&effectiveBench.has(p.id)&&!state.benchIds.length);
+    const isSelected=subSelection===p.id;
+    const isTarget=subSelection!==null&&!isSelected&&canSwapPlayers(subSelection,p.id,myPlayers,benchSet);
     const capStyle=isCap?'background:#E8A33D;color:#fff':'background:rgba(255,255,255,0.5);color:#555';
     const vcStyle=isVC?'background:#7FAEDB;color:#fff':'background:rgba(255,255,255,0.5);color:#555';
-    const benchStyle=inBench?'background:var(--green);color:#fff':'background:rgba(255,255,255,0.5);color:#555';
-    return `<div class="player-card${isCap?' captain':isVC?' vc':''}">
+    const swapStyle=isSelected?'background:var(--amber);color:#fff':isTarget?'background:#7FAEDB;color:#fff':'background:rgba(255,255,255,0.5);color:#555';
+    const swapTitle=isSelected?'Cancel substitution':isTarget?'Swap with selected player':'Select for substitution';
+    return `<div class="player-card${isCap?' captain':isVC?' vc':''}${isSelected?' selected':''}${isTarget?' can-target':''}">
       <span class="pc-pos">${POSMAP[p.element_type]}</span>
       <span class="pc-name">${isCap?'<b style="color:var(--amber)">(C)</b> ':isVC?'<b style="color:#7FAEDB">(V)</b> ':''}${p.web_name}</span>
       <span class="pc-pts">${p.total_points}pts · £${(p.now_cost/10).toFixed(1)}m</span>
       <div class="pc-actions">
         <button onclick="event.stopPropagation();setRole(${p.id},'captain')" style="${capStyle};border:none;border-radius:3px;font-size:10px;font-weight:700;padding:2px 5px;cursor:pointer">C</button>
         <button onclick="event.stopPropagation();setRole(${p.id},'vc')" style="${vcStyle};border:none;border-radius:3px;font-size:10px;font-weight:700;padding:2px 5px;cursor:pointer">VC</button>
-        <button onclick="event.stopPropagation();setRole(${p.id},'bench')" style="${benchStyle};border:none;border-radius:3px;font-size:10px;padding:2px 5px;cursor:pointer" title="${inBench?'Move to XI':'Move to bench'}">&#8645;</button>
+        <button onclick="event.stopPropagation();trySwap(${p.id})" style="${swapStyle};border:none;border-radius:3px;font-size:10px;padding:2px 5px;cursor:pointer" title="${swapTitle}">&#8645;</button>
         <button onclick="event.stopPropagation();setRole(${p.id},'remove')" style="background:rgba(255,255,255,0.5);color:var(--down);border:none;border-radius:3px;font-size:10px;padding:2px 5px;cursor:pointer">✕</button>
       </div>
     </div>`;
   }
 
-  const xiRows=[];
-  if(gkps.slice(0,1).length) xiRows.push(`<div class="pitch-row">${gkps.slice(0,1).map(p=>playerCard(p)).join('')}</div>`);
-  if(defs.slice(0,4).length) xiRows.push(`<div class="pitch-row">${defs.slice(0,4).map(p=>playerCard(p)).join('')}</div>`);
-  if(mids.slice(0,4).length) xiRows.push(`<div class="pitch-row">${mids.slice(0,4).map(p=>playerCard(p)).join('')}</div>`);
-  if(fwds.slice(0,2).length) xiRows.push(`<div class="pitch-row">${fwds.slice(0,2).map(p=>playerCard(p)).join('')}</div>`);
+  const xiRows=['GKP','DEF','MID','FWD'].map(pos=>{
+    const row=xi.filter(p=>POSMAP[p.element_type]===pos);
+    return row.length?`<div class="pitch-row">${row.map(playerCard).join('')}</div>`:'';
+  }).join('');
 
   const totalCost=myPlayers.reduce((s,p)=>s+p.now_cost,0)/10;
+  const subHint=subSelection!==null?`<div class="tip-box" style="margin-bottom:10px">Tap a highlighted player to complete the swap, or tap the selected player again to cancel.</div>`:'';
 
   return `
     <div class="card">
       <div class="card-title">Build your squad</div>
-      <div class="card-sub">Search and add your 15 FPL players. Tap a player card to set captain / remove.</div>
+      <div class="card-sub">Search and add your 15 FPL players. Tap ⇅ on a player, then tap ⇅ on another (bench ↔ XI) to swap them. Tap C / VC to set captain.</div>
       <input class="input" id="player-search" placeholder="Search player name…" autocomplete="off">
       <div id="search-results"></div>
     </div>
     ${myPlayers.length===0 ? `<div class="card"><div class="empty">Add players above to see your squad on the pitch.</div></div>` : `
+    ${subHint}
     <div class="pitch">
-      ${xiRows.join('')}
-      ${bench.length?`<div class="bench-label">BENCH</div><div class="bench-strip">${bench.map(p=>playerCard(p,true)).join('')}</div>`:''}
+      ${xiRows}
+      ${bench.length?`<div class="bench-label">BENCH</div><div class="bench-strip">${bench.map(playerCard).join('')}</div>`:''}
     </div>
     <div class="card" style="padding:12px 14px">
       <div style="display:flex;justify-content:space-between;font-size:13px">
@@ -442,18 +483,34 @@ window.setRole=function(id,role){
       if(state.captainId===id) state.captainId=null;
       state.viceCaptainId=id;
     }
-  } else if(role==='bench'){
-    // Toggle bench status
-    const inBench=state.benchIds.includes(id);
-    if(inBench){state.benchIds=state.benchIds.filter(x=>x!==id);}
-    else{state.benchIds=[...state.benchIds,id];}
-    lsSet('fpl_bench',state.benchIds);
   } else if(role==='remove'){
     removePlayer(id);
     return;
   }
   lsSet('fpl_captain',state.captainId);
   lsSet('fpl_vc',state.viceCaptainId);
+  render();
+};
+
+// Two-step substitution: first tap selects a player, second tap on a
+// valid bench/XI counterpart completes the swap. Tapping an invalid
+// pair re-selects rather than dead-ending the interaction.
+window.trySwap=function(id){
+  if(subSelection===id){ subSelection=null; render(); return; }
+  if(subSelection===null){ subSelection=id; render(); return; }
+  const myPlayers=state.myTeamIds.map(pid=>state.players.find(p=>p.id===pid)).filter(Boolean);
+  const benchSet=new Set(effectiveBenchIds(myPlayers));
+  if(canSwapPlayers(subSelection,id,myPlayers,benchSet)){
+    const fromBench=benchSet.has(subSelection);
+    const currentBench=[...benchSet];
+    state.benchIds=fromBench
+      ? currentBench.map(x=>x===subSelection?id:x)   // bench player -> XI, XI player -> bench
+      : currentBench.map(x=>x===id?subSelection:x);
+    lsSet('fpl_bench',state.benchIds);
+    subSelection=null;
+  } else {
+    subSelection=id;
+  }
   render();
 };
 window.addPlayer=function(id){
@@ -1078,8 +1135,8 @@ function renderTicker(){
   const teamFixtures={};
   state.teams.forEach(t=>{ teamFixtures[t.id]={}; });
   state.fixtures.filter(f=>!f.finished&&f.event&&allGWs.includes(f.event)).forEach(f=>{
-    const hdiff=customFDR_single(f.team_h,f.team_a,true);
-    const adiff=customFDR_single(f.team_a,f.team_h,false);
+    const hdiff=customFDR_single(f.team_h,f.team_a,true,f.team_h_difficulty);
+    const adiff=customFDR_single(f.team_a,f.team_h,false,f.team_a_difficulty);
     if(!teamFixtures[f.team_h]) teamFixtures[f.team_h]={};
     if(!teamFixtures[f.team_a]) teamFixtures[f.team_a]={};
     // A team can have a blank or double GW — store as array
@@ -1148,9 +1205,11 @@ function renderTicker(){
 }
 
 // Single fixture FDR (used by ticker, not needing lookahead average)
-function customFDR_single(teamId, oppId, isHome){
+// officialFdr: FPL's own difficulty rating for this fixture, used as a
+// fallback when there's no current-season match history yet.
+function customFDR_single(teamId, oppId, isHome, officialFdr){
   const hist=state.teamHistory[oppId]||[];
-  if(!hist.length) return 3;
+  if(!hist.length) return officialFdr!=null?Math.min(5,Math.max(1,officialFdr)):3;
   const last10=hist.slice(-10);
   const oppScored=last10.reduce((s,g)=>s+g.scored,0)/last10.length;
   const oppConceded=last10.reduce((s,g)=>s+g.conceded,0)/last10.length;
@@ -1308,7 +1367,7 @@ function renderChips(){
       <div class="card-sub">General guidance</div>
       <div style="font-size:13px;color:#3A4A3E;line-height:1.6">
         <b>Free Hit</b> is best saved for a blank gameweek (where your regular players have no fixture) — use it to field a full team of players who ARE playing. This can't be modelled without knowing which GWs will be blanked, but watch for fixture congestion in Feb–April.<br><br>
-        <b>General chip rules:</b> never use two chips in the same gameweek. Wildcard resets in January so you get a second one. Bench Boost and Triple Captain are once-per-season — save them for the highest-upside moment, not just a decent window.
+        <b>General chip rules:</b> never use two chips in the same gameweek. All four chips — Wildcard, Free Hit, Bench Boost, and Triple Captain — are available <b>twice</b> this season: once before the GW19 deadline (2 Jan) and once after. Unused first-half chips do <b>not</b> carry over — use them or lose them before the deadline, then a fresh set unlocks for the second half.
       </div>
     </div>`;
 }
@@ -1326,7 +1385,7 @@ function projectedPointsGW(player, gw){
   fixtures.forEach((f,i)=>{
     const isHome=f.team_h===player.team;
     const oppId=isHome?f.team_a:f.team_h;
-    const fdr=customFDR_single(player.team,oppId,isHome);
+    const fdr=customFDR_single(player.team,oppId,isHome,isHome?f.team_h_difficulty:f.team_a_difficulty);
     const fdrMult=1+(3-fdr)*0.12; // ~0.76–1.24, easier fixture = higher multiplier
     const rotationDiscount=i>0?0.85:1; // second fixture in a double GW carries rotation risk
     total+=form*fdrMult*qualityAdj*rotationDiscount;
@@ -1420,7 +1479,7 @@ function customFDR_single_gw(teamId, gw){
   const fdrs=fix.map(f=>{
     const isHome=f.team_h===teamId;
     const oppId=isHome?f.team_a:f.team_h;
-    return customFDR_single(teamId,oppId,isHome);
+    return customFDR_single(teamId,oppId,isHome,isHome?f.team_h_difficulty:f.team_a_difficulty);
   });
   // Double GW = average of both fixtures, slightly easier overall
   return fdrs.reduce((a,b)=>a+b,0)/fdrs.length * (fdrs.length>1?0.9:1);
