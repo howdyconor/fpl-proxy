@@ -174,7 +174,7 @@ let state = {
   expertPicks:[], activeTab:'team',
   statsPos:'MID', valuePos:'ALL', expertsGW:'all',
   projPos:'ALL', projTeam:'ALL', projSearch:'',
-  currentGW:null, tickerWeeks:5,
+  currentGW:null, tickerWeeks:5, statsTeam:'ALL',
   teamHistory:{}
 };
 
@@ -536,6 +536,17 @@ window.removePlayer=function(id){
 };
 
 // ── STATS ─────────────────────────────────────────────────────────────
+// Highest stat-composite player per position for a given team (same
+// eligibility bar — min 270 mins — as the rest of the Stats tab).
+function bestByPositionForTeam(teamId){
+  return ['GKP','DEF','MID','FWD'].map(pos=>{
+    const eligible=state.players.filter(p=>POSMAP[p.element_type]===pos&&p.team===teamId&&p.minutes>270);
+    if(!eligible.length) return{pos,player:null};
+    const best=eligible.map(p=>({...p,comp:compositeScore(p)})).sort((a,b)=>b.comp-a.comp)[0];
+    return{pos,player:best};
+  });
+}
+
 function renderStats(){
   const pos=state.statsPos;
   const filtered=state.players.filter(p=>POSMAP[p.element_type]===pos&&p.minutes>270);
@@ -563,6 +574,33 @@ function renderStats(){
 
   const filterBtns=['GKP','DEF','MID','FWD'].map(p=>
     `<button class="pos-filter ${p===pos?'active':''}" data-pos="${p}">${p}</button>`).join('');
+
+  const teamOptions=[...state.teams].sort((a,b)=>a.short_name.localeCompare(b.short_name))
+    .map(t=>`<option value="${t.id}" ${String(state.statsTeam)===String(t.id)?'selected':''}>${t.short_name}</option>`).join('');
+
+  const teamBestCard=state.statsTeam==='ALL'?'':(()=>{
+    const teamId=Number(state.statsTeam);
+    const teamName=state.teamById[teamId]?.short_name||'';
+    const rows=bestByPositionForTeam(teamId).map(({pos:p2,player})=>player?`
+      <tr>
+        <td>${posTag(p2)}</td>
+        <td>${player.web_name}</td>
+        <td class="mono" style="font-size:12px">£${(player.now_cost/10).toFixed(1)}m</td>
+        <td><div class="score-bar" style="width:70px"><div class="score-fill" style="width:${player.comp*100}%"></div></div></td>
+        <td class="mono" style="font-size:12px">${player.total_points}pts</td>
+      </tr>`:`
+      <tr><td>${posTag(p2)}</td><td colspan="4" class="text-muted" style="font-size:12px">No qualifying player yet (min 270 mins)</td></tr>`
+    ).join('');
+    return `
+    <div class="card">
+      <div class="card-title">Best by position — ${teamName}</div>
+      <div class="card-sub">Highest stat composite score per position for this club</div>
+      <table>
+        <thead><tr><th>Pos</th><th>Player</th><th>Price</th><th>Stat score</th><th>Pts</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  })();
 
   const bars=corrs.map(c=>`
     <div class="bar-row">
@@ -609,7 +647,12 @@ function renderStats(){
       <div class="card-sub">Correlation of each stat with total points · ${filtered.length} players (min 270 mins)</div>
       <div class="pos-filters" id="stats-filters">${filterBtns}</div>
       ${filtered.length<5?`<div class="empty">Not enough data for this position yet.</div>`:bars}
+      <select class="input" id="stats-team" style="width:auto;margin-top:10px;margin-bottom:0">
+        <option value="ALL">Best by position: pick a team…</option>
+        ${teamOptions}
+      </select>
     </div>
+    ${teamBestCard}
     <div class="card">
       <div class="card-title">Top ${pos} targets — stat composite</div>
       <div class="card-sub">Weighted by stats that actually correlate to points at this position</div>
@@ -642,6 +685,8 @@ function bindStats(){
   document.querySelectorAll('#stats-filters .pos-filter').forEach(btn=>{
     btn.addEventListener('click',()=>{state.statsPos=btn.dataset.pos;render();});
   });
+  const teamSelect=document.getElementById('stats-team');
+  if(teamSelect) teamSelect.addEventListener('change',()=>{state.statsTeam=teamSelect.value;render();});
 }
 
 // ── VALUE & FORM ──────────────────────────────────────────────────────
