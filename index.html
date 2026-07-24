@@ -154,6 +154,7 @@
   <button data-tab="transfers">Transfers</button>
   <button data-tab="ticker">Fixture Ticker</button>
   <button data-tab="chips">Chip Planner</button>
+  <button data-tab="projections">Projected Points</button>
 </div>
 <div id="main">
   <div id="loading" style="padding:40px;text-align:center;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:0.04em">PULLING LIVE DATA FROM FPL API…</div>
@@ -170,6 +171,7 @@ let state = {
   myTeamIds:[], captainId:null, viceCaptainId:null, benchIds:[],
   expertPicks:[], activeTab:'team',
   statsPos:'MID', valuePos:'ALL', expertsGW:'all',
+  projPos:'ALL', projTeam:'ALL', projSearch:'',
   teamHistory:{}
 };
 
@@ -291,6 +293,21 @@ function compositeScore(player){
   return totalWeight>0 ? score/totalWeight : 0;
 }
 
+// How a player's actual points compare to what their underlying stats predict,
+// relative to position peers. +ve delta = overperforming (regression risk),
+// -ve delta = underperforming (breakout candidate).
+function regressionSignal(player, peers){
+  peers = peers || state.players.filter(p=>POSMAP[p.element_type]===POSMAP[player.element_type]&&p.minutes>270);
+  if(!peers.length) return {predictedPts:0, delta:0, deltaRatio:0};
+  const comp=compositeScore(player);
+  const avgComp=peers.reduce((s,q)=>s+compositeScore(q),0)/peers.length||1;
+  const avgPts=peers.reduce((s,q)=>s+q.total_points,0)/peers.length||1;
+  const predictedPts=(comp/avgComp)*avgPts;
+  const delta=player.total_points-predictedPts;
+  const deltaRatio=delta/Math.max(avgPts,1);
+  return{predictedPts,delta,deltaRatio};
+}
+
 // Overall transfer score — no differential penalty, expert = mild positive signal
 function transferScore(player){
   const form = parseFloat(player.form)||0;
@@ -320,6 +337,7 @@ function render(){
     case 'transfers': el.innerHTML=renderTransfers(); bindTransfers(); break;
     case 'ticker': el.innerHTML=renderTicker(); break;
     case 'chips': el.innerHTML=renderChips(); break;
+    case 'projections': el.innerHTML=renderProjections(); bindProjections(); break;
   }
 }
 
@@ -461,12 +479,7 @@ function renderStats(){
   const allScored=filtered.map(p=>{
     const comp=compositeScore(p);
     const ppm=p.total_points/(p.now_cost/10);
-    // Predict points from comp score relative to position average
-    const avgComp=filtered.reduce((s,q)=>s+compositeScore(q),0)/filtered.length||1;
-    const avgPts=filtered.reduce((s,q)=>s+q.total_points,0)/filtered.length||1;
-    const predictedPts=(comp/avgComp)*avgPts;
-    const delta=p.total_points-predictedPts; // +ve = overperforming, -ve = underperforming
-    const deltaRatio=delta/Math.max(avgPts,1);
+    const {predictedPts,delta,deltaRatio}=regressionSignal(p,filtered);
     return{...p,comp,ppm,predictedPts,delta,deltaRatio};
   });
 
@@ -912,6 +925,8 @@ function renderTransfers(){
     const fdr=customFDR(p.team);
     const form=parseFloat(p.form)||0;
     const score=transferScore(p);
+    const comp=compositeScore(p);
+    const {deltaRatio}=regressionSignal(p);
     const flags=[];
     if(form<3) flags.push('Cold form');
     if(fdr&&fdr>=3.8) flags.push('Tough fixture run');
@@ -919,9 +934,11 @@ function renderTransfers(){
       flags.push(`Injury doubt (${p.chance_of_playing_next_round}%)`);
     if((p.transfers_out_event||0)>(p.transfers_in_event||0)*1.5)
       flags.push('Heavily transferred out');
+    if(deltaRatio>0.2) flags.push('Regression risk — stats say fewer points ahead');
+    const breakoutSignal=deltaRatio<-0.2&&comp>0.3;
     const verdict=flags.length===0?'hold':flags.length===1?'monitor':'out';
     const label={hold:'HOLD',monitor:'MONITOR',out:'CONSIDER OUT'}[verdict];
-    return{...p,fdr,flags,verdict,label,score};
+    return{...p,fdr,flags,verdict,label,score,breakoutSignal};
   });
 
   const candidates=state.players
@@ -953,6 +970,7 @@ function renderTransfers(){
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:600">${posTag(POSMAP[p.element_type])} &nbsp;${p.web_name} <span class="text-muted" style="font-weight:400;font-size:12px">(${state.teamById[p.team]?.short_name||''})</span></div>
           ${p.flags.length?`<div style="font-size:11px;color:var(--muted);margin-top:3px">${p.flags.join(' · ')}</div>`:''}
+          ${p.breakoutSignal?`<div style="font-size:11px;color:var(--up);margin-top:2px">✦ Stats ahead of returns — breakout signal</div>`:''}
         </div>
         <span class="verdict verdict-${p.verdict}">${p.label}</span>
       </div>`).join('');
@@ -1251,6 +1269,106 @@ function renderChips(){
         <b>General chip rules:</b> never use two chips in the same gameweek. Wildcard resets in January so you get a second one. Bench Boost and Triple Captain are once-per-season — save them for the highest-upside moment, not just a decent window.
       </div>
     </div>`;
+}
+
+// ── PROJECTED POINTS ─────────────────────────────────────────────────
+// Purely algorithmic estimate — no AI involved. Blends recent form with
+// per-fixture difficulty and underlying-stats quality. Values are only
+// meaningful once players have a scoring history (form > 0).
+function projectedPointsGW(player, gw){
+  const fixtures=state.fixtures.filter(f=>!f.finished&&f.event===gw&&(f.team_h===player.team||f.team_a===player.team));
+  if(!fixtures.length) return null; // blank GW
+  const form=parseFloat(player.form)||0;
+  const qualityAdj=0.85+compositeScore(player)*0.3; // 0.85–1.15, rewards strong underlying stats
+  let total=0;
+  fixtures.forEach((f,i)=>{
+    const isHome=f.team_h===player.team;
+    const oppId=isHome?f.team_a:f.team_h;
+    const fdr=customFDR_single(player.team,oppId,isHome);
+    const fdrMult=1+(3-fdr)*0.12; // ~0.76–1.24, easier fixture = higher multiplier
+    const rotationDiscount=i>0?0.85:1; // second fixture in a double GW carries rotation risk
+    total+=form*fdrMult*qualityAdj*rotationDiscount;
+  });
+  return Math.max(0,total);
+}
+
+function pointsColor(v){
+  if(v===null) return '';
+  if(v>=6) return 'text-up';
+  if(v<3.5) return 'text-amber';
+  return '';
+}
+
+function renderProjections(){
+  const allGWs=[...new Set(state.fixtures.filter(f=>!f.finished&&f.event).map(f=>f.event))].sort((a,b)=>a-b).slice(0,5);
+  if(!allGWs.length) return `<div class="card"><div class="empty">No upcoming fixtures found — check back once the new season fixture list is published.</div></div>`;
+
+  const pos=state.projPos, teamFilter=state.projTeam, search=normalise(state.projSearch||'');
+  let filtered=state.players.slice();
+  if(pos!=='ALL') filtered=filtered.filter(p=>POSMAP[p.element_type]===pos);
+  if(teamFilter!=='ALL') filtered=filtered.filter(p=>String(p.team)===String(teamFilter));
+  if(search) filtered=filtered.filter(p=>normalise(p.web_name).includes(search));
+
+  const rows=filtered.map(p=>{
+    const perGW=allGWs.map(gw=>projectedPointsGW(p,gw));
+    const total=perGW.reduce((s,v)=>s+(v||0),0);
+    return{p,perGW,total};
+  }).sort((a,b)=>b.total-a.total).slice(0,50);
+
+  const filterBtns=['ALL','GKP','DEF','MID','FWD'].map(p=>
+    `<button class="pos-filter ${p===pos?'active':''}" data-pos="${p}">${p}</button>`).join('');
+  const teamOptions=[...state.teams].sort((a,b)=>a.short_name.localeCompare(b.short_name))
+    .map(t=>`<option value="${t.id}" ${String(teamFilter)===String(t.id)?'selected':''}>${t.short_name}</option>`).join('');
+
+  const gwHeaders=allGWs.map(gw=>`<th>GW${gw}</th>`).join('');
+  const rowsHtml=rows.map(({p,perGW,total})=>`
+    <tr>
+      <td>${posTag(POSMAP[p.element_type])} &nbsp;${p.web_name}</td>
+      <td class="text-muted mono" style="font-size:12px">${state.teamById[p.team]?.short_name||''}</td>
+      <td class="mono" style="font-size:12px">£${(p.now_cost/10).toFixed(1)}m</td>
+      ${perGW.map(v=>`<td class="mono ${pointsColor(v)}" style="font-size:12px">${v===null?'–':v.toFixed(1)}</td>`).join('')}
+      <td class="mono" style="font-weight:700">${total.toFixed(1)}</td>
+    </tr>`).join('');
+
+  return`
+    <div class="card">
+      <div class="card-title">Projected Points — next ${allGWs.length} gameweeks</div>
+      <div class="card-sub">Estimated points = recent form × fixture-ease multiplier × underlying-stats adjustment, per gameweek. Algorithmic only — no AI. Values are flat until players build up a form history this season.</div>
+      <div class="pos-filters" id="proj-filters">${filterBtns}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <select class="input" id="proj-team" style="width:auto;margin-bottom:0">
+          <option value="ALL" ${teamFilter==='ALL'?'selected':''}>All teams</option>
+          ${teamOptions}
+        </select>
+        <input class="input" id="proj-search" placeholder="Search players…" style="flex:1;min-width:160px;margin-bottom:0" value="${state.projSearch||''}">
+      </div>
+    </div>
+    <div class="card" style="padding:0">
+      <div class="ticker-wrap">
+        <table class="ticker-grid">
+          <thead><tr><th class="team-col">Player</th><th>Team</th><th>Price</th>${gwHeaders}<th>Total</th></tr></thead>
+          <tbody>${rowsHtml.length?rowsHtml:'<tr><td colspan="'+(4+allGWs.length)+'" class="empty">No players match these filters.</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function bindProjections(){
+  document.querySelectorAll('#proj-filters .pos-filter').forEach(btn=>{
+    btn.addEventListener('click',()=>{state.projPos=btn.dataset.pos;render();});
+  });
+  const teamSelect=document.getElementById('proj-team');
+  if(teamSelect) teamSelect.addEventListener('change',()=>{state.projTeam=teamSelect.value;render();});
+  const searchInput=document.getElementById('proj-search');
+  if(searchInput){
+    searchInput.addEventListener('input',()=>{
+      state.projSearch=searchInput.value;
+      const cursorPos=searchInput.selectionStart;
+      render();
+      const newInput=document.getElementById('proj-search');
+      if(newInput){newInput.focus();newInput.setSelectionRange(cursorPos,cursorPos);}
+    });
+  }
 }
 
 // FDR for a specific GW (single fixture lookup)
