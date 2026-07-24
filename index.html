@@ -191,7 +191,7 @@ async function fplFetch(path){
 
 // ── NORMALISE for search (strip accents) ─────────────────────────────
 function normalise(str){
-  return str.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/['\u2019]/g,'').toLowerCase();
 }
 
 // ── TABS ──────────────────────────────────────────────────────────────
