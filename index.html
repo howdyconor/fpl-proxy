@@ -174,7 +174,7 @@ let state = {
   expertPicks:[], activeTab:'team',
   statsPos:'MID', valuePos:'ALL', expertsGW:'all',
   projPos:'ALL', projTeam:'ALL', projSearch:'',
-  currentGW:null,
+  currentGW:null, tickerWeeks:5,
   teamHistory:{}
 };
 
@@ -343,7 +343,7 @@ function render(){
     case 'experts': el.innerHTML=renderExperts(); bindExperts(); break;
     case 'differentials': el.innerHTML=renderDifferentials(); break;
     case 'transfers': el.innerHTML=renderTransfers(); bindTransfers(); break;
-    case 'ticker': el.innerHTML=renderTicker(); break;
+    case 'ticker': el.innerHTML=renderTicker(); bindTicker(); break;
     case 'chips': el.innerHTML=renderChips(); break;
     case 'projections': el.innerHTML=renderProjections(); bindProjections(); break;
   }
@@ -1119,19 +1119,18 @@ function buildTeamHistory(){
 
 // ── FIXTURE TICKER ────────────────────────────────────────────────────
 function renderTicker(){
-  const myIds=new Set(state.myTeamIds);
   const myTeamTeamIds=new Set(
     state.myTeamIds.map(id=>state.players.find(p=>p.id===id)).filter(Boolean).map(p=>p.team)
   );
 
-  // Get upcoming gameweeks (up to 10)
+  const weeks=state.tickerWeeks||5;
   const allGWs=[...new Set(
     state.fixtures.filter(f=>!f.finished&&f.event).map(f=>f.event)
-  )].sort((a,b)=>a-b).slice(0,10);
+  )].sort((a,b)=>a-b).slice(0,weeks);
 
   if(!allGWs.length) return `<div class="card"><div class="empty">No upcoming fixtures found — check back once the new season fixture list is published.</div></div>`;
 
-  // Build lookup: teamId -> { gw -> {opp, fdr, home} }
+  // Build lookup: teamId -> { gw -> [{opp, fdr, home}] } — array to handle blank/double GWs
   const teamFixtures={};
   state.teams.forEach(t=>{ teamFixtures[t.id]={}; });
   state.fixtures.filter(f=>!f.finished&&f.event&&allGWs.includes(f.event)).forEach(f=>{
@@ -1139,22 +1138,24 @@ function renderTicker(){
     const adiff=customFDR_single(f.team_a,f.team_h,false,f.team_a_difficulty);
     if(!teamFixtures[f.team_h]) teamFixtures[f.team_h]={};
     if(!teamFixtures[f.team_a]) teamFixtures[f.team_a]={};
-    // A team can have a blank or double GW — store as array
     if(!teamFixtures[f.team_h][f.event]) teamFixtures[f.team_h][f.event]=[];
     if(!teamFixtures[f.team_a][f.event]) teamFixtures[f.team_a][f.event]=[];
     teamFixtures[f.team_h][f.event].push({opp:state.teamById[f.team_a]?.short_name||'?',fdr:hdiff,home:true});
     teamFixtures[f.team_a][f.event].push({opp:state.teamById[f.team_h]?.short_name||'?',fdr:adiff,home:false});
   });
 
-  // Sort teams: my team players' clubs first, then by avg upcoming FDR
-  const sortedTeams=[...state.teams].sort((a,b)=>{
-    const aMe=myTeamTeamIds.has(a.id)?0:1;
-    const bMe=myTeamTeamIds.has(b.id)?0:1;
-    if(aMe!==bMe) return aMe-bMe;
-    const avgA=allGWs.map(gw=>(teamFixtures[a.id][gw]||[{fdr:3}])[0].fdr).reduce((s,v)=>s+v,0)/allGWs.length;
-    const avgB=allGWs.map(gw=>(teamFixtures[b.id][gw]||[{fdr:3}])[0].fdr).reduce((s,v)=>s+v,0)/allGWs.length;
-    return avgA-avgB;
-  });
+  function avgFdr(teamId){
+    const perGW=allGWs.map(gw=>{
+      const fixtures=teamFixtures[teamId][gw];
+      if(!fixtures||!fixtures.length) return 3.5; // blank GW — treat as hard, matches Chip Planner convention
+      return fixtures.reduce((s,f)=>s+f.fdr,0)/fixtures.length;
+    });
+    return perGW.reduce((a,b)=>a+b,0)/perGW.length;
+  }
+
+  // Ranked purely by fixture ease over the selected window (easiest first).
+  // ★ still marks your squad's clubs so you can spot them within the ranking.
+  const ranked=[...state.teams].map(t=>({t,avg:avgFdr(t.id)})).sort((a,b)=>a.avg-b.avg);
 
   function fdrClass(fdr){
     if(fdr<=1.8) return 'fdr-1';
@@ -1164,8 +1165,11 @@ function renderTicker(){
     return 'fdr-5';
   }
 
+  const weekBtns=[3,5,8,10].map(w=>
+    `<button class="pos-filter ${w===weeks?'active':''}" data-weeks="${w}">${w} GWs</button>`).join('');
+
   const gwHeaders=allGWs.map(gw=>`<th>GW${gw}</th>`).join('');
-  const rows=sortedTeams.map(t=>{
+  const rows=ranked.map(({t,avg},i)=>{
     const isMyTeam=myTeamTeamIds.has(t.id);
     const cells=allGWs.map(gw=>{
       const fixtures=teamFixtures[t.id][gw]||[];
@@ -1177,15 +1181,18 @@ function renderTicker(){
       return `<td>${inner}</td>`;
     }).join('');
     return `<tr class="${isMyTeam?'my-team-row':''}">
+      <td class="mono" style="text-align:center;color:var(--muted);font-size:11px">${i+1}</td>
       <td class="team-col">${isMyTeam?'★ ':''}${t.short_name}</td>
+      <td style="text-align:center"><span class="${fdrClass(avg)}" style="padding:1px 6px">${avg.toFixed(1)}</span></td>
       ${cells}
     </tr>`;
   }).join('');
 
   return `
     <div class="card">
-      <div class="card-title">Fixture Ticker — next ${allGWs.length} gameweeks</div>
-      <div class="card-sub">Custom FDR · ★ = your squad's clubs appear first · scroll right for more GWs · (H) home (A) away</div>
+      <div class="card-title">Fixture Ticker — ranked over next ${allGWs.length} gameweeks</div>
+      <div class="card-sub">All 20 teams ranked easiest → hardest by average custom FDR over the window below · ★ = your squad's clubs · (H) home (A) away</div>
+      <div class="pos-filters" id="ticker-weeks">${weekBtns}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;font-size:11px">
         <span><span class="fdr-1" style="padding:1px 6px">1.x</span> Very easy</span>
         <span><span class="fdr-2" style="padding:1px 6px">2.x</span> Easy</span>
@@ -1197,11 +1204,17 @@ function renderTicker(){
     <div class="card" style="padding:0">
       <div class="ticker-wrap">
         <table class="ticker-grid">
-          <thead><tr><th class="team-col">Team</th>${gwHeaders}</tr></thead>
+          <thead><tr><th>#</th><th class="team-col">Team</th><th>Avg</th>${gwHeaders}</tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
     </div>`;
+}
+
+function bindTicker(){
+  document.querySelectorAll('#ticker-weeks .pos-filter').forEach(btn=>{
+    btn.addEventListener('click',()=>{state.tickerWeeks=parseInt(btn.dataset.weeks);render();});
+  });
 }
 
 // Single fixture FDR (used by ticker, not needing lookahead average)
