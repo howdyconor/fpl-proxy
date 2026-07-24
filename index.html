@@ -755,6 +755,7 @@ function bindValue(){
 
 // ── EXPERTS ───────────────────────────────────────────────────────────
 let expertSearch={query:'',selected:null};
+let pendingScan=null; // {expertName, gw, matched:[{id,name,selected}], unmatched:[name,...]}
 
 function getGWOptions(){
   const gws=new Set(state.expertPicks.map(e=>e.gw).filter(Boolean));
@@ -834,6 +835,21 @@ function renderExperts(){
       </div>
       <div id="scan-status" style="margin-top:8px;font-size:12px;color:var(--muted)"></div>
     </div>
+    ${pendingScan?`
+    <div class="card">
+      <div class="card-title">Review scanned picks</div>
+      <div class="card-sub">Untick anyone who shouldn't count — e.g. bench fodder, or a wrong name match — before adding to consensus.</div>
+      ${pendingScan.matched.map((m,i)=>`
+        <label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #F2EFE6;font-size:13px;cursor:pointer">
+          <input type="checkbox" data-idx="${i}" ${m.selected?'checked':''} class="pending-check">
+          ${m.name}
+        </label>`).join('')}
+      ${pendingScan.unmatched.length?`<div style="font-size:11px;color:var(--muted);margin-top:8px">Not matched to a player: ${pendingScan.unmatched.join(', ')}</div>`:''}
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn btn-primary" id="confirm-scan-btn">Add selected</button>
+        <button class="btn" id="cancel-scan-btn" style="background:#EDEAE0;color:#555">Cancel</button>
+      </div>
+    </div>`:''}
     ${gwSelector}
     <div class="card">
       <div class="card-title">Consensus (${visible.length} picks${filterGW!=='all'?` · GW ${filterGW}`:''})</div>
@@ -935,29 +951,48 @@ function bindExperts(){
         const data=await resp.json();
         if(data.error) throw new Error(data.error);
         const names=data.players||[];
-        // Match to players
-        let matched=0;
+        // Match to players — don't commit yet, let the user review first
+        // (catches anything the vision prompt still mis-includes, e.g.
+        // bench fodder, and lets false-positive name matches be unticked)
+        const matched=[], unmatched=[];
         names.forEach(name=>{
           const norm=normalise(name);
           const found=state.players.find(p=>normalise(p.web_name).includes(norm)||norm.includes(normalise(p.web_name)));
-          if(found){
-            state.expertPicks=[...state.expertPicks,{
-              id:Date.now().toString()+'_'+found.id,
-              expert:expertName, note:'scanned',
-              gw:gwVal?parseInt(gwVal):null,
-              playerId:found.id,
-              playerName:found.web_name
-            }];
-            matched++;
-          }
+          if(found) matched.push({id:found.id,name:found.web_name,selected:true});
+          else unmatched.push(name);
         });
-        lsSet('fpl_expert_picks',state.expertPicks);
-        scanStatus.textContent=`✓ Added ${matched} of ${names.length} players from image.`;
+        pendingScan={expertName,gw:gwVal?parseInt(gwVal):null,matched,unmatched};
+        scanStatus.textContent=matched.length?'Review the picks below before adding.':'No players matched — try a clearer screenshot.';
         render();
       } catch(e){
         scanStatus.textContent=`Scan failed: ${e.message}`;
       }
     });
+  }
+
+  if(pendingScan){
+    document.querySelectorAll('.pending-check').forEach(cb=>{
+      cb.addEventListener('change',()=>{
+        pendingScan.matched[Number(cb.dataset.idx)].selected=cb.checked;
+      });
+    });
+    const confirmBtn=document.getElementById('confirm-scan-btn');
+    if(confirmBtn) confirmBtn.addEventListener('click',()=>{
+      pendingScan.matched.filter(m=>m.selected).forEach(m=>{
+        state.expertPicks=[...state.expertPicks,{
+          id:Date.now().toString()+'_'+m.id,
+          expert:pendingScan.expertName, note:'scanned',
+          gw:pendingScan.gw,
+          playerId:m.id,
+          playerName:m.name
+        }];
+      });
+      lsSet('fpl_expert_picks',state.expertPicks);
+      pendingScan=null;
+      render();
+    });
+    const cancelBtn=document.getElementById('cancel-scan-btn');
+    if(cancelBtn) cancelBtn.addEventListener('click',()=>{ pendingScan=null; render(); });
   }
 }
 

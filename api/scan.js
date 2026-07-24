@@ -29,7 +29,7 @@ export default async function handler(req, res) {
             },
             {
               type: 'text',
-              text: 'This is a screenshot of an FPL (Fantasy Premier League) team. List every player name you can see. Return ONLY a JSON array of strings with the player surnames or web names as they appear in FPL. Example: ["Salah","Haaland","Alexander-Arnold"]. No other text, no markdown.'
+              text: 'This is a screenshot of an FPL (Fantasy Premier League) team. List ONLY the starting XI — the 11 players in the main pitch/lineup area. Do NOT include any players shown on the bench (typically displayed below a dividing line, in a separate strip, or under a "BENCH" label). Return ONLY a JSON array of strings with the player surnames or web names as they appear in FPL. Example: ["Salah","Haaland","Alexander-Arnold"]. No other text, no markdown.'
             }
           ]
         }]
